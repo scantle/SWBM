@@ -1,0 +1,5 @@
+4
+mkdir recharge
+copy SFR_network.txt SVHSM.sfr
+copy MNW2_wells.txt SVHSM.mnw2
+copy SFR_network_jtf.txt SVHSM_sfr.jtf

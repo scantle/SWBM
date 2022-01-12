@@ -1,0 +1,18 @@
+subws_ID  ISEG  subws_name  stream_name
+1  1  Cold Stream  Cold Stream
+1  2  Cold Stream  Bonta Creek
+1  10  Cold Stream  Antelope Creek
+1  33  Cold Stream  Berry Creek
+2  37  Hamlin Creek  Hamlin Creek
+3  32  Turner Creek  Turner Creek
+4  31  Fletcher Creek  Fletcher Creek
+5  28  Carman Creek  West Fork Carman Creek
+5  29  Carman Creek  East Fork Carman Creek
+6  50  Big Grizzly Creek  Big Grizzly Creek
+7  27  Mapes Creek  Mapes Creek
+8  19  Little Last Chance Creek  Little Last Chance Creek
+10  12  Bear Valley Creek-Smithneck Creek  Bear Valley Creek
+10  13  Bear Valley Creek-Smithneck Creek  Smithneck Creek
+10  14  Bear Valley Creek-Smithneck Creek  Badenough Creek
+10  17  Bear Valley Creek-Smithneck Creek  Staverville Creek
+11  6  Lemon Creek  Lemon Creek

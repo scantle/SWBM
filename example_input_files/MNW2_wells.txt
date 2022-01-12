@@ -1,0 +1,368 @@
+# Multi-Node Well (MNW2) Package
+# Data set created 2021-10-03 using MODFLOW Pre-Processing.R
+# Contains pumping values for agricultural irrigation wells and municipal supply wells
+91  50  2  !  DataSet 1: MNWMAX, IWL2CB, MNWPRNT
+DMS_039  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1496.14  1339.17  154  46     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+21N14E36Q002M  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1497.67  1426.95  156  48     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_037  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1489.13  1278.82  132  110     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_031  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1500.73  1259.93  153  129     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_030  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1496.78  1408.39  157  128     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_029  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1499.83  1346.21  154  122     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_036  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1471.46  1447.08  150  139     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_035  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1511.72  1453.8  155  141     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_033  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1459.58  1413.86  152  135     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_034  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1463.86  1438.26  157  135     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_032  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1503.18  1378.21  154  131     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_043  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1535.76  1422.07  66  68     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_044  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1487.89  1247.1  87  76     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_002_old  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1347.01  1205.28  80  145     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_001  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1488.81  1235.82  83  152     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_020  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1359.89  1266.92  108  150     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_023_and_024  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1486.07  1245.28  118  125     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_025  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1485.47  1225.47  122  121     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_026  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1491.57  1353.8  135  140     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_022  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1494.62  1261.45  138  141     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_027  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1412.01  1252.29  135  131     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_028  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1451.33  1369.04  139  137     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_016  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1317.52  1248.33  99  177     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_017  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1320.27  1258.39  103  173     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_018  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1445.85  1380.31  111  175     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_041  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1494.61  1250.77  112  174     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_019  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1491.57  1326.97  117  163     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_042  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1451.94  1400.13  118  163     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_021_and_040  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1489.46  1414.48  121  154     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_046  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1459.85  1415.35  42  150     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_010  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1401.03  1257.17  82  197     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_008  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1341.6  1256.25  63  172     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_007_old  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1359.58  1261.13  72  172     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_003  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1488.49  1436.68  41  143     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_004  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1486.05  1276.96  48  136     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_009  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1375.12  1245.89  79  173     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_045  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1500.71  1259.92  68  189     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_013_old  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1387.59  1244.33  76  182     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_011  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1416.89  1289.79  72  189     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_012  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1353.79  1255.04  84  190     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_047  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1335.81  1240.11  93  194     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_014  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1340.99  1250.77  95  190     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_038  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1495.38  1254.59  136  94     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_048  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1510.56  1269.77  165  124     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_049  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1488.09  1247.3  75  142     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_005  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1517.85  1277.06  51  176     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_051  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1495.02  1254.23  133  26     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_052  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1479.16  1399.91  47  137     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_054  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1485.27  1244.47  77  139     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_055  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1486.61  1245.82  104  141     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_056  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1327.09  1192.98  57  163     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_057  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1357.16  1258.71  61  169     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_058  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1490.6  1249.8  125  62     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_059  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1505.11  1264.32  154  134     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_006  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1510.01  1269.22  49  173     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_060  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1494.3  1253.51  126  30     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_061  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1502.2  1261.41  78  200     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_062  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1485.58  1244.79  47  138     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_063  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1386.48  1331.62  43  142     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+21N14E32G001M  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1505.59  1264.79  126  17     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_071  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1369.2  1253.37  125  135     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+22N14E14F002M  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1492.01  1251.21  64  92     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_083  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1500.38  1259.59  155  49     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_084  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1507.85  1419.45  134  153     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+016-010-005_Well_2  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1492  1483.16  124  118     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_007  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1492.91  1252.12  72  172     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+WCR1992-004594  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1444.03  1427.27  107  40     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_050  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1332.93  1267.4  133  112     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_053  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1437.47  1320.73  151  126     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_066  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1523.22  1334.24  181  127     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_013  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1352.88  1194.39  75  182     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_065  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1438.81  1329.08  148  128     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_064  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1292.19  1121.5  99  163     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_067  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1407.25  1285.33  140  142     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_068  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1404.67  1282.75  125  161     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_069  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1333.76  1193.55  85  190     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_002  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1293.35  1171.43  80  145     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_070  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1336.58  1196.37  89  196     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_072  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1463.84  1412.03  44  153     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_073  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1369.71  1220.36  105  152     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_085  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1494.06  1262.41  50  158     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_086  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1400.73  1376.35  52  166     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_021  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1490.43  1249.63  122  154     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_024  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1485.75  1244.96  118  125     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_075  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1509.97  1269.18  164  124     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_078  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1539.1  1459.85  186  120     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_079  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1542.76  1506.18  186  120     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+Loyalton_Well_1  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1495.74  1487.21  168  123     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_076  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1476.11  1262.75  157  126     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_077  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1425  1370.14  155  125     ! Data Set 2D; Ztop, Zbotm, ROW, COL
+DMS_DUMMY  -1                   ! Data Set 2A: WELLID, NNODES
+SPECIFYcwc  0  0  0  0        ! Data Set 2B: LOSSTYPE, PUMPLOC, Qlimit, PPFLAG, PUMPCAP
+1000                          ! Data Set 2C; CWC
+1425  1370.14  155  125     ! Data Set 2D; Ztop, Zbotm, ROW, COL
