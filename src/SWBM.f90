@@ -32,7 +32,8 @@ PROGRAM SWBM
   REAL :: stn_precip, Total_Ref_ET, MAR_vol
   REAL, ALLOCATABLE, DIMENSION(:)  :: drain_flow, max_MAR_field_rate, moisture_save
   REAL :: start, finish
-  CHARACTER(10) :: SFR_Template, scenario, suffix, date_text
+  CHARACTER(10) :: SFR_Template, suffix, date_text ! , scenario
+  !CHARACTER(10) :: recharge_scenario, flow_lim_scenario, nat_veg_scenario
   CHARACTER(20) :: model_name
   CHARACTER(30) :: filename
   CHARACTER(400) :: cmd
@@ -54,9 +55,10 @@ PROGRAM SWBM
   eff_precip = 0.
   Total_Ref_ET = 0.
   open(unit=10, file='general_inputs.txt', status='old')
-  read(10, *) ! read header into nothing 
-  read(10, *) model_name, WYstart, npoly, nlandcover, nAgWells, nMuniWells, nSubws, &
-  inflow_is_vol, nSFR_inflow_segs, nmonths, nrows, ncols, SFR_Template, scenario
+  read(10, *) model_name, WYstart, npoly, nlandcover, nAgWells, nMuniWells, nSubws
+  read(10, *) inflow_is_vol, nSFR_inflow_segs, nmonths, nrows, ncols
+  read(10, *) RD_Mult, SFR_Template
+  !read(10, *) recharge_scenario, flow_lim_scenario, nat_veg_scenario
   close (10)
   print*, SFR_Template
   if (trim(SFR_Template)/='UCODE' .and. trim(SFR_Template)/='PEST') then 
@@ -65,28 +67,9 @@ PROGRAM SWBM
     	CALL EXIT
   endif
 
-  if (trim(scenario)=='basecase' .or. trim(scenario)=='Basecase' .or. trim(scenario)=='BASECASE') then            ! Set logicals for Scenario type
-    MAR_active=  .FALSE.  
-    ILR_active = .FALSE.
-  else if(trim(scenario)=='MAR' .or. trim(scenario)=='mar') then
-    MAR_active=  .TRUE. 
-    ILR_active = .FALSE.
-  else if (trim(scenario)=='ILR' .or. trim(scenario)=='ilr') then
-    MAR_active=  .FALSE.
-  	ILR_active = .TRUE.
-  else if (trim(scenario)=='MAR_ILR' .or. trim(scenario)=='mar_ilr') then
-  	 MAR_active=  .TRUE.       
-     ILR_active = .TRUE.    
-  else if(trim(scenario).ne.'basecase' .or. trim(scenario).ne.'Basecase' .or. trim(scenario).ne.'BASECASE' &      ! Exit program if incorrect scenario type
-         .or. trim(scenario).ne.'MAR' .or. trim(scenario).ne.'mar' &
-         .or. trim(scenario).ne.'ILR' .or. trim(scenario).ne.'ilr' &
-         .or. trim(scenario).ne.'MAR_ILR' .or. trim(scenario).ne.'mar_ilr' ) then
-    write(*,*)'Unknown scenario input in general_inputs.txt'
-    write(800,*)'Unknown scenario input in general_inputs.txt'
-    CALL EXIT
-  endif
-  write(*,'(2a10)')'Scenario: ',trim(scenario)
-  write(800,'(2a10)')'Scenario: ',trim(scenario)
+  ! Scenario selection process goes here, potentially, if necessary
+  ! Print scenario selections to screen and log
+
   SFR_Template = TRIM(SFR_Template)
   write(*,'(A27, A6)') 'SFR Template File Format = ',SFR_Template
   write(800,'(A27, A6)') 'SFR Template File Format = ',SFR_Template
@@ -98,11 +81,12 @@ PROGRAM SWBM
   ! [NEED TO UPDATE CODE FOR MNW2 PACKAGE] read(536,*) ! Read heading line into nothing
   ! [NEED TO UPDATE CODE FOR MNW2 PACKAGE] read(536,*)param_dummy,n_wel_param  ! read in number of well parameters (for printing later)
   ! [NEED TO UPDATE CODE FOR MNW2 PACKAGE] close(536)
-  open(unit=10, file='ndays.txt', status = 'old')
+  open(unit=10, file='stress_period_days.txt', status = 'old')
   read(10,*)   ! read headers into nothing
   ALLOCATE(ndays(nmonths))
   do i=1, nmonths
-  	read(10,*) dummy, ndays(i)
+  	read(10,*) dummy, ndays(i)   ! Reads the stress period # in the first column to "dummy" variable
+    write(*, '(I6, I6)') i, ndays(i)
   enddo
   close(10)
   
@@ -120,6 +104,7 @@ PROGRAM SWBM
   read(85,*)  ! read header into nothing
   CALL initialize_streams(nSubws, nSFR_inflow_segs)
   CALL read_landcover_table(nlandcover)
+
   CALL readpoly(npoly, nrows, ncols, rch_zones)    ! Read in field info
   CALL initialize_wells(npoly, nAgWells, nMuniWells)                       ! Read in Ag well info
   open(unit=82, file = 'polygon_landcover_ids.txt', status = 'old')
@@ -166,14 +151,17 @@ PROGRAM SWBM
   fields%irr_flag = 0          ! Initialize tot_irr flag array
   month = 10                   ! Initialize month variable to start in October
   
-  open(unit=801, file= trim(model_name)//'.mnw2', Access = 'append', status='old')       
+  ! open(unit=801, file= trim(model_name)//'.mnw2', Access = 'append', status='old')       
   WY = WYstart   ! water year
   do im=1, nmonths                ! Loop over each month
-    read(82,*) date_text, fields(:)%landcover_id        ! read in landuse type
+    read(82,*) date_text, fields(:)%landcover_id           ! read in landuse type (by field, for each month)
+    ! read(xx,*) date_text, fields(:)%mar_amount     ! read in MAR application volumes (not driven by irrigation demand)
+    ! read(xx,*) date_text, fields(:)%curtail_frac   ! read in curtailment fractions 
+   
     read(85,*) date_text, SFR_allocation(:)%frac_subws_flow        ! read in multiplier for converting remaining subwatershed flows to SFR inflows
     read(537,*)  date_text, ag_wells_specified, ag_wells(:)%specified_volume 
     read(539,*) date_text, muni_wells(:)%specified_volume
-    if (im==1) CALL initial_conditions                  ! initialize soil-water content for fields 
+    if (im==1) CALL initial_conditions                  ! initialize soil-water content for fields  ! Current debug point
     if (month==10) then
       CALL zero_year           ! If October zero out yearly accumulated volume
     elseif (month==13) then
@@ -234,7 +222,7 @@ PROGRAM SWBM
     CALL write_MODFLOW_SFR(im, nmonths, nSegs, model_name)
     CALL write_UCODE_SFR_template(im, nmonths, nSegs, model_name)   ! Write JTF file for UCODE 
     ! CALL write_MODFLOW_WEL(im, month, nAgWells, n_wel_param, model_name)       
-    CALL write_MODFLOW_MNW2(im, nAgWells, nMuniWells, ag_wells_specified)          
+    ! CALL write_MODFLOW_MNW2(im, nAgWells, nMuniWells, ag_wells_specified)          
     if (month==9) then
     CALL print_annual(WY, ag_wells_specified)        ! print annual values at the end of September
       WY = WY +1

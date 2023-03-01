@@ -25,9 +25,9 @@ MODULE irrigation
     INTEGER :: dummy, i 
     
     open(unit=10, file='SFR_network.txt', status='old')
-    DO i=1,6   ! read first 6 comments lines of SFR file into nothing
-      read(10,*) 
-    ENDDO
+    !DO i=1,6   ! read first 6 comments lines of SFR file into nothing
+    !  read(10,*) 
+    !ENDDO
     read(10,*) dummy, nSegs
     close(10)
     ALLOCATE(SFR_Routing(nSegs)) ! Allocate arrays of length equal to number of SFR segments       

@@ -3,10 +3,10 @@ MODULE define_fields
 IMPLICIT NONE
 
 TYPE polygon
-  INTEGER   :: SWBM_id, SWBM_LU, subws_ID, irr_type, well_id, well_idx, water_source
-  INTEGER   :: nModelCells, landcover_id, irr_flag, WL2CP_year, runoff_ISEG
-  REAL      :: area, whc, init_fill_frac, max_infil_rate, precip_fact
-  LOGICAL   :: Irrigating, ILR, ILR_Active
+  INTEGER      :: SWBM_id, SWBM_LU, subws_ID, irr_type, well_idx, water_source, well_id
+  INTEGER      :: nModelCells, landcover_id, irr_flag, WL2CP_year, runoff_ISEG
+  REAL         :: area, whc, init_fill_frac, max_infil_rate, precip_fact
+  LOGICAL      :: Irrigating, ILR, ILR_Active
 END TYPE
 
 TYPE accumulator
@@ -18,7 +18,7 @@ TYPE accumulator
 END TYPE
 
 TYPE well
-    INTEGER :: well_id, layer, well_row, well_col
+    INTEGER :: layer, well_row, well_col, well_id
     REAL :: coordx, coordy, top_scrn_z, bot_scrn_z
     REAL :: daily_vol, monthly_vol, annual_vol, monthly_rate, specified_volume, specified_rate
     CHARACTER(50) :: well_name
@@ -76,7 +76,7 @@ SUBROUTINE readpoly(npoly, nrows, ncols, rch_zones)
   open(unit=10,file="polygons_table.txt",status="old")
   read(10,*)       ! read headers into nothing
   write(800,*)'SWBM_ID subws_ID SWBM_LU SWBM_IRR area &
-    &Water_Src whc init_fill_frac WL2CP_year ILR' 
+    &Water_Src whc init_fill_frac WL2CP_year' ! ILR' 
   open(unit=11,file="precip_factors.txt",status="old")
   read(11,*) ! read headers into nothing
    
@@ -84,7 +84,7 @@ SUBROUTINE readpoly(npoly, nrows, ncols, rch_zones)
       read(10,*)fields(i)%SWBM_id, fields(i)%subws_ID, fields(i)%SWBM_LU, &
         fields(i)%irr_type, fields(i)%area, fields(i)%water_source, fields(i)%whc, &
         fields(i)%init_fill_frac, fields(i)%max_infil_rate, fields(i)%runoff_ISEG,&
-        fields(i)%WL2CP_year, fields(i)%ILR
+        fields(i)%WL2CP_year , fields(i)%ILR
       read(11,*)dummy, fields(i)%precip_fact
       dummy_mat = 0
       where (rch_zones(:,:) == i) 
@@ -93,7 +93,7 @@ SUBROUTINE readpoly(npoly, nrows, ncols, rch_zones)
       fields(i)%nModelCells = SUM(dummy_mat)
       write(800,'(i6,i3,i4,i5,f20.7,i5,f20.5,f20.5,i6,l3)')i ,fields(i)%subws_ID, fields(i)%SWBM_LU, &
       fields(i)%irr_type, fields(i)%area, fields(i)%water_source, fields(i)%whc, fields(i)%init_fill_frac, &
-      fields(i)%WL2CP_year, fields(i)%ILR
+      fields(i)%WL2CP_year , fields(i)%ILR
     enddo
   close(10)
   close(11)
@@ -136,18 +136,19 @@ SUBROUTINE initialize_wells(npoly, nAgWells, nMuniWells)
   read(537,*)  dummy, dummy, ag_well_id(:)    ! read well_id for ag wells
   open(unit=10, file="ag_well_summary.txt", status="old")                                 
   read(10,*)  
+  write(*,*) nAgWells
   do i=1, nAgWells                                                                          
     read(10,*) ag_wells(i)%well_id, ag_wells(i)%well_name, ag_wells(i)%top_scrn_z, ag_wells(i)%bot_scrn_z,&
     ag_wells(i)%well_row, ag_wells(i)%well_col, ag_wells(i)%coordx, ag_wells(i)%coordy
     ag_wells(i)%well_name = trim(ag_wells(i)%well_name)
     if (ag_wells(i)%well_id /= ag_well_id(i)) then
-    	write(*,*) "Ordering of agricultural wells in ag_well_summary.txt differes from that in ag_well_pumping_rates.txt"
-    	write(800,*) "Ordering of agricultural wells in ag_well_summary.txt differes from that in ag_well_pumping_rates.txt"
+    	write(*,*) "Ordering of agricultural wells in ag_well_summary.txt differes from that in ag_well_specified_volume.txt"
+    	write(800,*) "Ordering of agricultural wells in ag_well_summary.txt differes from that in ag_well_specified_volume.txt"
     call EXIT
     endif
   enddo 
   close(10)
-  fields%well_id = 0 
+  fields%well_id = 0 ! Not sure what this is for? Why reset the well_id? Declare this as an attribute of fields?
   open(unit=10, file="ag_well_list_by_polygon.txt", status="old")                                                                                                                                                                                                                         
   read(10,*)  ! read header into nothing
   write(800,*)'SWBM_ID  Well_ID  WELL_IDX'
@@ -227,9 +228,9 @@ subroutine initial_conditions
   previous%deficiency = 0.
   previous%effprecip = 0.
   previous%change_in_storage = 0.
-    
+  
   do i=1, npoly
-    daily(i)%swc  = fields(i)%whc*crops(fields(i)%landcover_id)%RootDepth*fields(i)%init_fill_frac
+    daily(i)%swc  = fields(i)%whc * crops(fields(i)%landcover_id)%RootDepth * fields(i)%init_fill_frac
   enddo 
   previous%swc = daily%swc     ! Set previous day's swc to same as initial condition
       
