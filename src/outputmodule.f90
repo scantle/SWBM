@@ -308,6 +308,7 @@ MODULE SWBM_output
     write(123,'(i4,999F20.2)') im, landcover_deficiency(:)    
     write(124,'(i4,999F20.2)') im, landcover_delta_s(:)
     write(61,'(i4,999F20.2)') im, landcover_area(:)
+
     write(125,'(i4,8F20.0)') im, sum(monthly%effprecip_vol), (sum(monthly%tot_irr_vol)-sum(monthly%gw_irr_vol)), &
     sum(monthly%gw_irr_vol), -sum(monthly%aET_vol), -sum(monthly%recharge_vol), &
     -sum(monthly%runoff_vol), -sum(monthly%change_in_storage_vol) ,&

@@ -126,20 +126,24 @@ MODULE irrigation
     subws = fields(ip)%subws_ID
     irreff = 0.
     select case (fields(ip)%irr_type)
-  	  case(1)   ! Flood irrigation
+      case(1)  ! Flood irrigation
   	  	irreff = crops(fields(ip)%landcover_id)%irreff_flood
   	  case(2)   ! Wheel line irrigation
   	  	irreff = crops(fields(ip)%landcover_id)%irreff_wl
   	  case(3)   ! Center pivot irrigation
   	  	irreff = crops(fields(ip)%landcover_id)%irreff_cp
+      case(999)   ! Unknown irrigation - assign Wheel Line irr. eff.
+  	  	irreff = crops(fields(ip)%landcover_id)%irreff_wl  
     end select
     if ( (crops(fields(ip)%landcover_id)%irrigated .and. fields(ip)%irr_type /= 555) &                                         ! If field is irrigated
     .and. ((month == crops(fields(ip)%landcover_id)%IrrMonthStart .and. jday >= crops(fields(ip)%landcover_id)%IrrDayStart)&   ! and during defined irrigation season
     .or.  (month > crops(fields(ip)%landcover_id)%IrrMonthStart .and. month < crops(fields(ip)%landcover_id)%IrrMonthEnd)&
     .or.  (month == crops(fields(ip)%landcover_id)%IrrMonthEnd .and. jday <= crops(fields(ip)%landcover_id)%IrrDayEnd))& 
-    .and. daily(ip)%swc < crops(fields(ip)%landcover_id)%IrrSWC*fields(ip)%whc*crops(fields(ip)%landcover_id)%RootDepth) then                                           ! and SWC has dropped below defined irrigation trigger   	
+    .and. daily(ip)%swc < crops(fields(ip)%landcover_id)%IrrSWC*fields(ip)%whc*crops(fields(ip)%landcover_id)%RootDepth) then        ! and SWC has dropped below defined irrigation trigger   	
       daily(ip)%tot_irr=max(0.,((daily(ip)%pET-daily(ip)%effprecip)/irreff))                                                 ! Calculate applied linear irrigation 	 	
-    	select case (fields(ip)%water_source)                                                                                  ! Assign irrigation to water source
+      daily(ip)%tot_irr = daily(ip)%tot_irr - daily(ip)%tot_irr * fields(ip)%curtail_frac                                    ! Subtract curtailment fraction (default: 0) from calculated irr. demand
+      daily(ip)%tot_irr = daily(ip)%tot_irr + fields(ip)%mar_amount                                                          ! Add MAR volume (default: 0) to total irrigation
+      select case (fields(ip)%water_source)                                                                                  ! Assign irrigation to water source
     		case(1) ! surface water
     			if (surfaceWater(subws)%avail_sw_vol >= (daily(ip)%tot_irr * fields(ip)%area)) then                                ! If available surface water exceeds demand
     			  surfaceWater(subws)%sw_irr = surfaceWater(subws)%sw_irr + (daily(ip)%tot_irr * fields(ip)%area)                  ! Add daily irrigation volume to total surface water irrigation 
@@ -170,7 +174,7 @@ MODULE irrigation
     	  	daily(ip)%gw_irr = daily(ip)%tot_irr  ! All irrigation assigned to groundwater well
     	end select
     endif
-    
+
   END SUBROUTINE IRRIGATION_RULESET
   
 ! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

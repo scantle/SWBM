@@ -5,7 +5,7 @@ IMPLICIT NONE
 TYPE polygon
   INTEGER      :: SWBM_id, SWBM_LU, subws_ID, irr_type, well_idx, water_source, well_id
   INTEGER      :: nModelCells, landcover_id, irr_flag, WL2CP_year, runoff_ISEG
-  REAL         :: area, whc, init_fill_frac, max_infil_rate, precip_fact
+  REAL         :: area, whc, init_fill_frac, max_infil_rate, precip_fact, mar_amount, curtail_frac
   LOGICAL      :: Irrigating, ILR, ILR_Active
 END TYPE
 
@@ -85,6 +85,12 @@ SUBROUTINE readpoly(npoly, nrows, ncols, rch_zones)
         fields(i)%irr_type, fields(i)%area, fields(i)%water_source, fields(i)%whc, &
         fields(i)%init_fill_frac, fields(i)%max_infil_rate, fields(i)%runoff_ISEG,&
         fields(i)%WL2CP_year , fields(i)%ILR
+        if (fields(i)%irr_type == 999) then 
+          fields(i)%irr_type = 2                ! Change unknown irrigation type to wheel line
+        end if
+        if (fields(i)%water_source == 999) then 
+          fields(i)%irr_type = 2                ! Change unknown water source to groundwater
+        end if
       read(11,*)dummy, fields(i)%precip_fact
       dummy_mat = 0
       where (rch_zones(:,:) == i) 

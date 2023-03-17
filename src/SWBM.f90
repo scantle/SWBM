@@ -123,6 +123,12 @@ PROGRAM SWBM
     close(10)
   endif
 
+  ! Input files specifying field-by-field, 1 per stress period values
+  open(unit=86, file = 'MAR_volumes.txt', status = 'old')
+  read(86,*)  ! read header into nothing
+  open(unit=87, file = 'curtailment_fractions.txt', status = 'old')
+  read(87,*)  ! read header into nothing
+  ! Input files specifying 1 value per stress period
   open(unit=887,file='precip.txt', status = 'old')
   read(887,*)  ! read header into nothing                   
   open(unit=88,file='ref_et.txt', status = 'old')
@@ -155,8 +161,8 @@ PROGRAM SWBM
   WY = WYstart   ! water year
   do im=1, nmonths                ! Loop over each month
     read(82,*) date_text, fields(:)%landcover_id           ! read in landuse type (by field, for each month)
-    ! read(xx,*) date_text, fields(:)%mar_amount     ! read in MAR application volumes (not driven by irrigation demand)
-    ! read(xx,*) date_text, fields(:)%curtail_frac   ! read in curtailment fractions 
+    read(86,*) date_text, fields(:)%mar_amount     ! read in MAR application volumes (not driven by irrigation demand) (by field, for each month)
+    read(87,*) date_text, fields(:)%curtail_frac   ! read in curtailment fractions  (by field, for each month)
    
     read(85,*) date_text, SFR_allocation(:)%frac_subws_flow        ! read in multiplier for converting remaining subwatershed flows to SFR inflows
     read(537,*)  date_text, ag_wells_specified, ag_wells(:)%specified_volume 
