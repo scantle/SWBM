@@ -6,7 +6,7 @@ MODULE irrigation
   REAL:: kc_grain, kc_alfalfa,kc_alfalfa_mult, kc_grain_mult, kc_noirr
   REAL:: kc_pasture, kc_pasture_mult
   REAL:: irreff_flood, irreff_wl_LU11, irreff_cp_LU11, irreff_wl_LU2, irreff_cp_LU2
-  REAL :: AV_REF_ET_1a, AV_REF_ET_1b, AV_REF_ET_2, ETo
+  REAL :: AV_REF_ET_1a, AV_REF_ET_1b, AV_REF_ET_2, ETo, ETo_in
   REAL :: monthly_precip_vol
   REAL :: EF_SF_Ratio, Sugar_Ratio, Johnson_Ratio, Crystal_Ratio, Patterson_Ratio
   LOGICAL :: irrigating
@@ -77,8 +77,9 @@ MODULE irrigation
     surfaceWater(:)%sw_irr = 0.                                                                  ! Reset surface-water irrigation to zero        
     read(215,*) date_dummy, (surfaceWater(i)%inflow_irr, i=1, nSubws)                            ! Read in date and irrigation inflow for each stream simulated
     read(216,*) date_dummy, (surfaceWater(i)%inflow_nonirr, i=1, nSubws)                         ! Read in date and irrigation inflow for each stream simulated
+
     if (inflow_is_vol) then
-    	surfaceWater%avail_sw_vol = surfaceWater%inflow_irr
+    	surfaceWater%avail_sw_vol = surfaceWater%inflow_irr       ! Define available SW vol
     else 
       surfaceWater%inflow_irr = surfaceWater%inflow_irr * numdays                                ! If inflow is an average monthly rate, convert to volume
       surfaceWater%inflow_nonirr = surfaceWater%inflow_nonirr * numdays
@@ -135,6 +136,7 @@ MODULE irrigation
       case(999)   ! Unknown irrigation - assign Wheel Line irr. eff.
   	  	irreff = crops(fields(ip)%landcover_id)%irreff_wl  
     end select
+    ! add mar volume calc step
     if ( (crops(fields(ip)%landcover_id)%irrigated .and. fields(ip)%irr_type /= 555) &                                         ! If field is irrigated
     .and. ((month == crops(fields(ip)%landcover_id)%IrrMonthStart .and. jday >= crops(fields(ip)%landcover_id)%IrrDayStart)&   ! and during defined irrigation season
     .or.  (month > crops(fields(ip)%landcover_id)%IrrMonthStart .and. month < crops(fields(ip)%landcover_id)%IrrMonthEnd)&
@@ -186,13 +188,16 @@ MODULE irrigation
     LOGICAL, INTENT(in)  :: MAR_active
     REAL:: rch
   
-    daily(ip)%aET=min(daily(ip)%pET, previous(ip)%swc+daily(ip)%effprecip+daily(ip)%tot_irr) 
-    daily(ip)%deficiency=daily(ip)%pET-daily(ip)%aET
+    !write(*,'(A20, F6.2)') "daily_ip pET", daily(ip)%pET
+    !write(*,'(A20, F6.2)') "daily_ip effPrcp", daily(ip)%effprecip
+    !write(*,'(A20, F6.2)') "daily_ip totirr", daily(ip)%tot_irr
+    daily(ip)%aET=min(daily(ip)%pET, previous(ip)%swc+daily(ip)%effprecip+daily(ip)%tot_irr)  ! Actual ET for field ip is the pET (if enough soil water) or sum of yesterday's SWC, today's eff. precip, and the total irrigation (if not enough soil water)
+    daily(ip)%deficiency=daily(ip)%pET - daily(ip)%aET ! calculate crop water deficiency
     if (daily(ip)%aET > 0) daily(ip)%ET_active =  1   ! Set ET flag to 1 if ET is active that day
-    rch = max(0., (previous(ip)%swc+daily(ip)%effprecip+daily(ip)%tot_irr-daily(ip)%aET)-&
+    rch = max(0., (previous(ip)%swc+daily(ip)%effprecip+daily(ip)%tot_irr-daily(ip)%aET)-& ! Recharge is sum(yesterday's SWC, today's eff. precip, and today's total irrigation) minus today's aET, minus the field's water holding capacity
     fields(ip)%whc*crops(fields(ip)%landcover_id)%RootDepth)
     if (rch > fields(ip)%max_infil_rate) then
-    	daily(ip)%runoff = (rch - fields(ip)%max_infil_rate)
+    	daily(ip)%runoff = (rch - fields(ip)%max_infil_rate) ! Calculate runoff if recharge exceeds field's max infiltration rate
     	rch = fields(ip)%max_infil_rate
     endif
     daily(ip)%recharge = rch

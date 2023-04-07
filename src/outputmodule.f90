@@ -35,7 +35,7 @@ MODULE SWBM_output
     end do     
     open(unit=900, file='Recharge_Total.dat', status = 'replace')   
     write(900,*)'Total_Recharge_m^3/day  Total_Recharge_m^3'            
-    ! open(unit=84, file=trim(model_name)//'.rch', Access = 'append', status='old')                                                  
+    open(unit=84, file=trim(model_name)//'.rch', Access = 'append', status='replace')                                                  
     open(unit=90, file='monthly_effective_precip_linear.dat', status = 'replace')              
     write(90,*)'Monthly precip applied to each field normalized to the field area (m)'
     write(90,'(a14,a1,9999a14)')' Stress_Period',' ', header_text
@@ -368,10 +368,13 @@ MODULE SWBM_output
   SUBROUTINE write_MODFLOW_WEL(im, month, nAgWells, n_wel_param, model_name)
     
   INTEGER, INTENT(IN) :: im, month, nAgWells, n_wel_param
-  CHARACTER, INTENT(IN) :: model_name
+  CHARACTER(20), INTENT(IN) :: model_name
+  CHARACTER(24) :: wel_file
   INTEGER :: i, well_idx
   
-  open(unit=536, file=trim(model_name)//'.wel', Access = 'append', status='old')
+  wel_file = trim(model_name) // '.wel'
+
+  open(unit=536, file= wel_file, Access = 'append', status='old')
   if (month == 1 .or. month == 2 .or. month == 3 .or. month == 4 .or. &                              ! If October-March
       month == 5 .or. month == 6) then
     write(536,'(I10,I10,A28,I4)')nAgWells, n_wel_param-2, '               Stress Period',im         ! Only MFR is active, subtract number of ditches represented 
@@ -599,9 +602,22 @@ MODULE SWBM_output
      
        ALLOCATE(recharge_matrix(nrows,ncols))
        recharge_matrix = 0.
-       write(rch_mat_format, '(A1,I3,A7)')'(', ncols, 'G14.4)'    
+
+       if (im == 1) then
+        write(84,'(a31)')'# Recharge File written by SWBM'
+        write(84,*)'PARAMETER  0'
+        write(84,*)'3  50'
+        end if
+        
+        write(84,'(a10)')'1  0'
+        write(84,'(a63)')'        18   1.00000(10e14.6)                   -1     RECHARGE'
+  
+
+       write(rch_mat_format, '(A1,I3,A7)')'(', ncols, 'G14.4)'   
+       !write(*,'(a24)') rch_mat_format
        ! write(84,*)'1'
        ! write(84,*)' OPEN/CLOSE .\recharge\rch_SP'
+       !write(*,'(a24)') filename
                   
          do ip = 1, npoly
            where (rch_zones(:,:) == ip) 
@@ -615,6 +631,8 @@ MODULE SWBM_output
          else
         	write(filename, '(A22,I3,A4)') '.\recharge\recharge_SP_',SP,'.txt'
          endif
+         !write(*,'(a24)') filename
+
          open(unit=84, file=trim(filename), status = 'replace')
          
          write(84,rch_mat_format) recharge_matrix  

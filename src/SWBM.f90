@@ -26,9 +26,9 @@ PROGRAM SWBM
   IMPLICIT NONE
 
   INTEGER :: nmonths, numdays, WY, month, jday, i, im, nrows, ncols, ncmds, dummy, WYstart
-  INTEGER :: n_wel_param, num_daily_out, unit_num, num_MAR_fields, nSFR_inflow_segs
+  INTEGER :: n_wel_param, num_daily_out, unit_num, nSFR_inflow_segs!, num_MAR_fields
   INTEGER, ALLOCATABLE, DIMENSION(:,:) :: rch_zones, Discharge_Zone_Cells
-  INTEGER, ALLOCATABLE, DIMENSION(:)   :: MAR_fields, ip_daily_out, ndays, SFR_inflow_segs
+  INTEGER, ALLOCATABLE, DIMENSION(:)   :: ip_daily_out, ndays, SFR_inflow_segs!, MAR_fields
   REAL :: stn_precip, Total_Ref_ET, MAR_vol
   REAL, ALLOCATABLE, DIMENSION(:)  :: drain_flow, max_MAR_field_rate, moisture_save
   REAL :: start, finish
@@ -109,18 +109,18 @@ PROGRAM SWBM
   CALL initialize_wells(npoly, nAgWells, nMuniWells)                       ! Read in Ag well info
   open(unit=82, file = 'polygon_landcover_ids.txt', status = 'old')
   read(82,*)  ! read header into nothing
-  
-  if (MAR_active) then
-    open(unit=10,file='MAR_Fields.txt',status='old')      ! Read in MAR recharge matrix
-    read(10,*) num_MAR_fields, MAR_vol
-    ALLOCATE(MAR_fields(num_MAR_fields))                  ! Array of MAR field polygon IDs
-    ALLOCATE(max_MAR_field_rate(num_MAR_fields))          ! Array of maximum infiltration rate for MAR fields (1/10th lowest SSURGO value)
+
+ if (MAR_active) then
+!    open(unit=10,file='MAR_Fields.txt',status='old')      ! Read in MAR recharge matrix
+!    read(10,*) num_MAR_fields, MAR_vol
+!    ALLOCATE(MAR_fields(num_MAR_fields))                  ! Array of MAR field polygon IDs
+!    ALLOCATE(max_MAR_field_rate(num_MAR_fields))          ! Array of maximum infiltration rate for MAR fields (1/10th lowest SSURGO value)
     ALLOCATE(moisture_save(npoly))                        ! Array of soil-swc needed to recalculate recharge for MAR fields
     moisture_save = 0.                                    ! Initialize array
-    do i=1, num_MAR_fields
-      read(10,*)MAR_fields(i), max_MAR_field_rate(i)
-    enddo
-    close(10)
+!    do i=1, num_MAR_fields
+!      read(10,*)MAR_fields(i), max_MAR_field_rate(i)
+!    enddo
+!    close(10)
   endif
 
   ! Input files specifying field-by-field, 1 per stress period values
@@ -167,7 +167,7 @@ PROGRAM SWBM
     read(85,*) date_text, SFR_allocation(:)%frac_subws_flow        ! read in multiplier for converting remaining subwatershed flows to SFR inflows
     read(537,*)  date_text, ag_wells_specified, ag_wells(:)%specified_volume 
     read(539,*) date_text, muni_wells(:)%specified_volume
-    if (im==1) CALL initial_conditions                  ! initialize soil-water content for fields  ! Current debug point
+    if (im==1) CALL initial_conditions                  ! initialize soil-water content for fields  
     if (month==10) then
       CALL zero_year           ! If October zero out yearly accumulated volume
     elseif (month==13) then
@@ -176,11 +176,11 @@ PROGRAM SWBM
     numdays = ndays(im)        ! Number of days in the current month
     Total_Ref_ET = 0.          ! Reset monthly Average ET
     CALL zero_month                               ! Zero out monthly accumulated volume
-    if (month==10) CALL zero_year                 ! If October zero out yearly accumulated volume                   
+    !if (month==10) CALL zero_year                 ! If October zero out yearly accumulated volume                   
     CALL read_monthly_stream_inflow(inflow_is_vol, numdays)
     write(*,'(a15, i3,a13,i2,a18,i2)')'Stress Period: ',im,'   Month ID: ',month,'   Length (days): ', numdays
     write(800,'(a15, i3,a13,i2,a18,i2)')'Stress Period: ',im,'   Month ID: ',month,'   Length (days): ', numdays
-    read(220,*)drain_flow(im)                       ! Read drain flow into array         
+    read(220,*) drain_flow(im)                       ! Read drain flow into array         
     do jday=1, numdays                              ! Loop over days in each month
       if (jday==1) monthly%ET_active = 0            ! Set ET counter to 0 at the beginning of the month. Used for turning ET on and off in MODFLOW so it is not double counted.    
       daily%ET_active  = 0                          ! Reset ET active counter
@@ -190,12 +190,12 @@ PROGRAM SWBM
       daily%pET = 0.                                ! Reset daily ET value to zero
       daily%recharge = 0.                           ! Reset daily recharge value to zero 
       daily%runoff = 0.                             ! Reset daily runoff value to zero
-      read(88,*) date_text, ETo     
+      read(88,*)  ETo, ETo_in, date_text
       Total_Ref_ET = Total_Ref_ET + ETo        ! Increment monthly ET rate         
       read(887,*) stn_precip
       read(79,*) date_text, crops(:)%daily_kc 
       daily%effprecip = stn_precip * fields%precip_fact
-      daily%pET=ETo*crops(fields%landcover_id)%daily_kc*crops(fields%landcover_id)%kc_mult                        ! Set ET to current value for the day
+      daily%pET=ETo*crops(fields%landcover_id)%daily_kc * crops(fields%landcover_id)%kc_mult                        ! Set ET to current value for the day
       do ip=1, npoly
 	    	if (daily(ip)%effprecip < (0.2*ETo)) daily(ip)%effprecip = 0        
         if (ILR_active) then
@@ -213,7 +213,7 @@ PROGRAM SWBM
       ! CALL MAR(month, num_MAR_fields, MAR_fields, max_MAR_field_rate, MAR_vol, eff_precip, jday, moisture_save)
       if (daily_out_flag) CALL daily_out(num_daily_out,ip_daily_out)              ! Print Daily Output for Selected Fields
       CALL groundwater_pumping(jday, nAgWells, npoly, numdays, daily_out_flag, ag_wells_specified)      ! Assign gw_irr to wells
-	    CALL monthly_SUM                                                            ! add daily value to monthly total (e.g., monthly%tot_irr = monthly%tot_irr + daily%tot_irr)
+      CALL monthly_SUM                                                            ! add daily value to monthly total (e.g., monthly%tot_irr = monthly%tot_irr + daily%tot_irr)
       CALL annual_SUM                                                             ! add daily value to annual total (e.g., yearly%tot_irr = yearly%tot_irr + daily%tot_irr)
       if (jday==numdays) then                                         
       	CALL SFR_streamflow(npoly, numdays, nSubws, nSegs, nSFR_inflow_segs)      ! Convert remaining surface water and runoff to SFR inflows at end of the month	
@@ -227,7 +227,7 @@ PROGRAM SWBM
     CALL print_monthly_output(im, nlandcover, nSubws)
     CALL write_MODFLOW_SFR(im, nmonths, nSegs, model_name)
     CALL write_UCODE_SFR_template(im, nmonths, nSegs, model_name)   ! Write JTF file for UCODE 
-    ! CALL write_MODFLOW_WEL(im, month, nAgWells, n_wel_param, model_name)       
+    CALL write_MODFLOW_WEL(im, month, nAgWells, n_wel_param, model_name)       
     ! CALL write_MODFLOW_MNW2(im, nAgWells, nMuniWells, ag_wells_specified)          
     if (month==9) then
     CALL print_annual(WY, ag_wells_specified)        ! print annual values at the end of September
