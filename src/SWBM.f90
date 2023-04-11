@@ -34,8 +34,8 @@ PROGRAM SWBM
   REAL :: start, finish
   CHARACTER(10) :: SFR_Template, suffix, date_text ! , scenario
   !CHARACTER(10) :: recharge_scenario, flow_lim_scenario, nat_veg_scenario
-  CHARACTER(20) :: model_name
-  CHARACTER(30) :: filename
+  CHARACTER(20) :: model_name, text_dummy
+  CHARACTER(30) :: filename!, wel_file
   CHARACTER(400) :: cmd
   CHARACTER(50), ALLOCATABLE, DIMENSION(:) :: daily_out_name
   INTEGER, DIMENSION(31) :: ET_Active
@@ -58,7 +58,6 @@ PROGRAM SWBM
   read(10, *) model_name, WYstart, npoly, nlandcover, nAgWells, nMuniWells, nSubws
   read(10, *) inflow_is_vol, nSFR_inflow_segs, nmonths, nrows, ncols
   read(10, *) RD_Mult, SFR_Template
-  !read(10, *) recharge_scenario, flow_lim_scenario, nat_veg_scenario
   close (10)
   print*, SFR_Template
   if (trim(SFR_Template)/='UCODE' .and. trim(SFR_Template)/='PEST') then 
@@ -81,6 +80,12 @@ PROGRAM SWBM
   ! [NEED TO UPDATE CODE FOR MNW2 PACKAGE] read(536,*) ! Read heading line into nothing
   ! [NEED TO UPDATE CODE FOR MNW2 PACKAGE] read(536,*)param_dummy,n_wel_param  ! read in number of well parameters (for printing later)
   ! [NEED TO UPDATE CODE FOR MNW2 PACKAGE] close(536)
+  filename = trim(model_name) // '.wel'
+  open (unit=536, file= filename, status="old")     
+  read(536,*) ! Read heading line into nothing
+  read(536,*) text_dummy, n_wel_param  ! Read "PARAMETER" as dummy text; read in number of well parameters (for printing WEL file later)
+  close(536)
+
   open(unit=10, file='stress_period_days.txt', status = 'old')
   read(10,*)   ! read headers into nothing
   ALLOCATE(ndays(nmonths))
@@ -97,9 +102,6 @@ PROGRAM SWBM
   open(unit=10,file='recharge_zones.txt',status='old')      ! Read in MODFLOW recharge zone matrix
   read(10,*) rch_zones
   close(10)
-  ! [NEED TO RECODE FOR SIERRA VALLEY MODEL] open(unit=218,file='ET_Cells_DZ.txt',status='old')      ! Read in MODFLOW recharge zone matrix
-  ! [NEED TO RECODE FOR SIERRA VALLEY MODEL] read(218,*) Discharge_Zone_Cells
-  ! [NEED TO RECODE FOR SIERRA VALLEY MODEL] close(218)
   open(unit=85, file = 'SFR_subws_flow_partitioning.txt', status = 'old')
   read(85,*)  ! read header into nothing
   CALL initialize_streams(nSubws, nSFR_inflow_segs)
@@ -224,6 +226,8 @@ PROGRAM SWBM
     CALL convert_length_to_volume
     CALL monthly_out_by_field(im)
     CALL write_MODFLOW_RCH(im,numdays,nrows,ncols,rch_zones)
+    CALL write_MODFLOW_ETS(im,numdays,nrows,ncols,rch_zones,Total_Ref_ET,Discharge_Zone_Cells,npoly)
+  !  SUBROUTINE write_MODFLOW_ETS(im,month,nday,nrows,ncols,rch_zones,Total_Ref_ET,Discharge_Zone_Cells, npoly)
     CALL print_monthly_output(im, nlandcover, nSubws)
     CALL write_MODFLOW_SFR(im, nmonths, nSegs, model_name)
     CALL write_UCODE_SFR_template(im, nmonths, nSegs, model_name)   ! Write JTF file for UCODE 

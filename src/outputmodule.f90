@@ -369,31 +369,32 @@ MODULE SWBM_output
     
   INTEGER, INTENT(IN) :: im, month, nAgWells, n_wel_param
   CHARACTER(20), INTENT(IN) :: model_name
-  CHARACTER(24) :: wel_file
+  CHARACTER(30) :: filename
+  !CHARACTER(24) :: wel_file
   INTEGER :: i, well_idx
   
-  wel_file = trim(model_name) // '.wel'
+  filename = trim(model_name) // '.wel'
 
-  open(unit=536, file= wel_file, Access = 'append', status='old')
-  if (month == 1 .or. month == 2 .or. month == 3 .or. month == 4 .or. &                              ! If October-March
-      month == 5 .or. month == 6) then
-    write(536,'(I10,I10,A28,I4)')nAgWells, n_wel_param-2, '               Stress Period',im         ! Only MFR is active, subtract number of ditches represented 
-  else if (month == 7 .or. month == 8) then                                                            ! If April-May
-    write(536,'(I10,I10,A28,I4)')nAgWells, n_wel_param, '               Stress Period',im           ! MFR and Ditches are active, use all WEL parameters
-  else if (month == 9 .or. month == 10) then                                                           ! If June - July
-    write(536,'(I10,I10,A28,I4)')nAgWells, n_wel_param-7, '               Stress Period',im         ! Only Ditches are active, subtract number of MFR segments represented
-  else if (month == 11 .or. month == 0) then                                                           ! If August-September
-    write(536,'(I10,I10,A28,I4)')nAgWells, n_wel_param-9, '               Stress Period',im         ! Only Ditches are active, subtract number of MFR and Ditch segments represented                                              
+  open(unit=536, file= filename, Access = 'append', status='old')
+  if (month == 10 .or. month == 11 .or. month == 12 .or. month == 1 .or. &                              ! If October-March
+      month == 2 .or. month == 3) then
+    write(536,'(I10,I10,A28,I4)') nAgWells, n_wel_param-2, '               Stress Period',im         ! Only MFR is active, subtract number of ditches represented 
+  else if (month == 4 .or. month == 5) then                                                            ! If April-May
+    write(536,'(I10,I10,A28,I4)') nAgWells, n_wel_param, '               Stress Period',im           ! MFR and Ditches are active, use all WEL parameters
+  else if (month == 6 .or. month == 7) then                                                           ! If June - July
+    write(536,'(I10,I10,A28,I4)') nAgWells, n_wel_param-7, '               Stress Period',im         ! Only Ditches are active, subtract number of MFR segments represented
+  else if (month == 8 .or. month == 8) then                                                           ! If August-September
+    write(536,'(I10,I10,A28,I4)') nAgWells, n_wel_param-9, '               Stress Period',im         ! Only Ditches are active, subtract number of MFR and Ditch segments represented                                              
   end if
     
   do i=1,nAgWells
-  	! well_idx = fields(i)%well_idx
+  	well_idx = fields(i)%well_idx
     write(536,'(3I10,ES15.3)')ag_wells(well_idx)%layer, ag_wells(well_idx)%well_row, &
      ag_wells(well_idx)%well_col, -1*ag_wells(well_idx)%monthly_rate
   enddo
     
-  if (month == 1 .or. month == 2 .or. month == 3 .or. month == 4 .or. &                              ! If October-March MFR is active
-      month == 5 .or. month == 6) then                                                           
+  if (month == 10 .or. month == 11 .or. month == 12 .or. month == 1 .or. &                              ! If October-March MFR is active
+      month == 2 .or. month == 3) then                                                           
     write(536,*)'  MFR5'
     write(536,*)'  MFR6'
     write(536,*)'  MFR7'
@@ -401,7 +402,7 @@ MODULE SWBM_output
     write(536,*)'  MFR9'
     write(536,*)'  MFR10'
     write(536,*)'  MFR11'
-  else if (month == 7 .or. month == 8) then                                                            ! If April-May MFR and Ditches are active
+  else if (month == 4 .or. month == 5) then                                                            ! If April-May MFR and Ditches are active
     write(536,*)'  MFR5'                                            
     write(536,*)'  MFR6'
     write(536,*)'  MFR7'
@@ -411,7 +412,7 @@ MODULE SWBM_output
     write(536,*)'  MFR11'
     write(536,*)'  FRMRSDitch'
     write(536,*)'  SVIDDitch'
-  else if (month == 9 .or. month == 10) then                                                           ! If June-July ditches are active
+  else if (month == 6 .or. month == 7) then                                                           ! If June-July ditches are active
     write(536,*)'  FRMRSDitch'
     write(536,*)'  SVIDDitch'
   end if
@@ -546,21 +547,21 @@ MODULE SWBM_output
    END SUBROUTINE print_annual
      
 !  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     SUBROUTINE write_MODFLOW_ETS(im,month,nday,nrows,ncols,rch_zones,Total_Ref_ET,Discharge_Zone_Cells, npoly)
+     SUBROUTINE write_MODFLOW_ETS(im,numdays,nrows,ncols,rch_zones,Total_Ref_ET,Discharge_Zone_Cells, npoly)
      
-     INTEGER, INTENT(IN) :: im,month,nrows,ncols, npoly
-     INTEGER, INTENT(IN) :: rch_zones(nrows,ncols), nday(0:11), Discharge_Zone_Cells(nrows,ncols)
+     INTEGER, INTENT(IN) :: im,nrows,ncols, npoly !,month
+     INTEGER, INTENT(IN) :: rch_zones(nrows,ncols), Discharge_Zone_Cells(nrows,ncols) !,nday(0:11)
      REAL, INTENT(IN) :: Total_Ref_ET
      REAL :: Avg_Ref_ET
      REAL, DIMENSION(npoly) :: ET_fraction
-     INTEGER :: ip
+     INTEGER :: ip, numdays
      REAL, DIMENSION(nrows,ncols) :: Extinction_depth_matrix, ET_matrix_out
      
      ET_matrix_out = 0.
-     Avg_Ref_ET = Total_Ref_ET/real(nday(month))                                                   ! Calculate average Reference ET for populating ET package
+     Avg_Ref_ET = Total_Ref_ET/real(numdays)                                                   ! Calculate average Reference ET for populating ET package
      
      do ip=1,npoly
-       ET_fraction(ip) = monthly(ip)%ET_active / real(nday(month)) 
+       ET_fraction(ip) = monthly(ip)%ET_active / real(numdays) 
        where (rch_zones(:,:) == ip)
          ET_matrix_out(:,:) = Avg_Ref_ET * (1 - ET_fraction(ip))  ! Scale Average monthly ET by the number of days ET was not active on the field.
          Extinction_depth_matrix(:,:) = 0.5
@@ -598,7 +599,7 @@ MODULE SWBM_output
        INTEGER :: ip
        INTEGER, SAVE :: SP = 1
        REAL :: ttl_rch
-       CHARACTER(40) :: filename, rch_mat_format
+       CHARACTER(40) :: rch_mat_format ! filename,
      
        ALLOCATE(recharge_matrix(nrows,ncols))
        recharge_matrix = 0.
@@ -615,6 +616,7 @@ MODULE SWBM_output
 
        write(rch_mat_format, '(A1,I3,A7)')'(', ncols, 'G14.4)'   
        !write(*,'(a24)') rch_mat_format
+
        ! write(84,*)'1'
        ! write(84,*)' OPEN/CLOSE .\recharge\rch_SP'
        !write(*,'(a24)') filename
@@ -624,18 +626,19 @@ MODULE SWBM_output
              recharge_matrix(:,:) = monthly(ip)%recharge / numdays
            end where
          enddo
-         if (SP < 10) then
-           write(filename, '(A22,I1,A4)') '.\recharge\recharge_SP_',SP,'.txt'
-         elseif (SP < 100) then
-         	write(filename, '(A22,I2,A4)') '.\recharge\recharge_SP_',SP,'.txt'
-         else
-        	write(filename, '(A22,I3,A4)') '.\recharge\recharge_SP_',SP,'.txt'
-         endif
+         !if (SP < 10) then
+         !  write(filename, '(A22,I1,A4)') '.\recharge\recharge_SP_',SP,'.txt'
+         !elseif (SP < 100) then
+         !	write(filename, '(A22,I2,A4)') '.\recharge\recharge_SP_',SP,'.txt'
+         !else
+        !	write(filename, '(A22,I3,A4)') '.\recharge\recharge_SP_',SP,'.txt'
+         !endif
          !write(*,'(a24)') filename
 
-         open(unit=84, file=trim(filename), status = 'replace')
+         !open(unit=84, file=trim(filename), status = 'replace')
          
-         write(84,rch_mat_format) recharge_matrix  
+         !write(84,rch_mat_format) recharge_matrix  
+         write(84,'(10e14.6)') recharge_matrix  
          ttl_rch = sum(recharge_matrix*sum(fields%area))
          write(900,*) ttl_rch, ttl_rch*numdays
          SP = SP + 1

@@ -144,7 +144,8 @@ SUBROUTINE initialize_wells(npoly, nAgWells, nMuniWells)
   read(10,*)  
   write(*,*) nAgWells
   do i=1, nAgWells                                                                          
-    read(10,*) ag_wells(i)%well_id, ag_wells(i)%well_name, ag_wells(i)%top_scrn_z, ag_wells(i)%bot_scrn_z,&
+    read(10,*) ag_wells(i)%well_id, ag_wells(i)%well_name, ag_wells(i)%layer,&
+    ag_wells(i)%top_scrn_z, ag_wells(i)%bot_scrn_z,&
     ag_wells(i)%well_row, ag_wells(i)%well_col, ag_wells(i)%coordx, ag_wells(i)%coordy
     ag_wells(i)%well_name = trim(ag_wells(i)%well_name)
     if (ag_wells(i)%well_id /= ag_well_id(i)) then
