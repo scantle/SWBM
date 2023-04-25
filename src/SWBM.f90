@@ -126,7 +126,7 @@ PROGRAM SWBM
   endif
 
   ! Input files specifying field-by-field, 1 per stress period values
-  open(unit=86, file = 'MAR_volumes.txt', status = 'old')
+  open(unit=86, file = 'MAR_depth.txt', status = 'old')
   read(86,*)  ! read header into nothing
   open(unit=87, file = 'curtailment_fractions.txt', status = 'old')
   read(87,*)  ! read header into nothing
@@ -163,7 +163,7 @@ PROGRAM SWBM
   WY = WYstart   ! water year
   do im=1, nmonths                ! Loop over each month
     read(82,*) date_text, fields(:)%landcover_id           ! read in landuse type (by field, for each month)
-    read(86,*) date_text, fields(:)%mar_amount     ! read in MAR application volumes (not driven by irrigation demand) (by field, for each month)
+    read(86,*) date_text, fields(:)%mar_depth     ! read in MAR application volumes (not driven by irrigation demand) (by field, for each month)
     read(87,*) date_text, fields(:)%curtail_frac   ! read in curtailment fractions  (by field, for each month)
    
     read(85,*) date_text, SFR_allocation(:)%frac_subws_flow        ! read in multiplier for converting remaining subwatershed flows to SFR inflows
@@ -183,6 +183,11 @@ PROGRAM SWBM
     write(*,'(a15, i3,a13,i2,a18,i2)')'Stress Period: ',im,'   Month ID: ',month,'   Length (days): ', numdays
     write(800,'(a15, i3,a13,i2,a18,i2)')'Stress Period: ',im,'   Month ID: ',month,'   Length (days): ', numdays
     read(220,*) drain_flow(im)                       ! Read drain flow into array         
+    !write(*,*) "pre-irrigation ruleset sw_avail"
+    !write(*,*) surfaceWater%avail_sw_vol
+    !write(*,*) "pre-irrigation ruleset sw_irr"
+    !write(*,*) surfaceWater%sw_irr 
+    !write(*,*) " "
     do jday=1, numdays                              ! Loop over days in each month
       if (jday==1) monthly%ET_active = 0            ! Set ET counter to 0 at the beginning of the month. Used for turning ET on and off in MODFLOW so it is not double counted.    
       daily%ET_active  = 0                          ! Reset ET active counter
@@ -198,13 +203,23 @@ PROGRAM SWBM
       read(79,*) date_text, crops(:)%daily_kc 
       daily%effprecip = stn_precip * fields%precip_fact
       daily%pET=ETo*crops(fields%landcover_id)%daily_kc * crops(fields%landcover_id)%kc_mult                        ! Set ET to current value for the day
+
+      if (daily(ip)%effprecip < (0.2*ETo)) daily(ip)%effprecip = 0  
+      if(irrigating .eqv. .false.) then  ! if not irrigating yet, check number of fields irrigating
+          if(sum(fields%irr_flag)>=250) then
+            irrigating = .true.   ! If 20% of the fields are irrigating (by number, not area; 1251 irrigated fields), set logical to true
+            write(*,'(A3,I4,A27,I2,A5,I2)') "in ", WY, ", irrigating started month ", month, " day " , jday
+            write(*,*) " "
+        endif
+      endif
+
       do ip=1, npoly
-	    	if (daily(ip)%effprecip < (0.2*ETo)) daily(ip)%effprecip = 0        
-        if (ILR_active) then
+    
+        !if (ILR_active) then
           ! CALL IRRIGATION_ILR(ip, month, jday, eff_precip)
-	      else
-	        CALL IRRIGATION_RULESET(ip, month, jday)
-	      endif 
+	      !else
+	      CALL IRRIGATION_RULESET(ip, month, jday, irrigating)
+	      !endif 
 	      CALL water_budget(ip,jday,month,moisture_save,MAR_active)   
         if (month==12 .and. jday==31 .and. ip==npoly) then               ! If last day of the year, set tot_irr flags and logical to zero
 		      fields%irr_flag = 0         
@@ -218,11 +233,17 @@ PROGRAM SWBM
       CALL monthly_SUM                                                            ! add daily value to monthly total (e.g., monthly%tot_irr = monthly%tot_irr + daily%tot_irr)
       CALL annual_SUM                                                             ! add daily value to annual total (e.g., yearly%tot_irr = yearly%tot_irr + daily%tot_irr)
       if (jday==numdays) then                                         
-      	CALL SFR_streamflow(npoly, numdays, nSubws, nSegs, nSFR_inflow_segs)      ! Convert remaining surface water and runoff to SFR inflows at end of the month	
+      	CALL SFR_streamflow(npoly, numdays, nSubws, nSegs, nSFR_inflow_segs, month)      ! Convert remaining surface water and runoff to SFR inflows at end of the month	
         ann_spec_ag_vol = ann_spec_ag_vol + SUM(ag_wells%specified_volume)	      ! add monthly specified ag pumping volume to annual total
         ann_spec_muni_vol = ann_spec_muni_vol + SUM(muni_wells%specified_volume)  ! add monthly specified volume to annual total
       endif
     enddo             ! End of day loop  
+    !write(*,*) "post-irrigation ruleset sw_avail"
+    !write(*,*) surfaceWater%avail_sw_vol
+    !write(*,*) "post-irrigation ruleset sw_irr"
+    !write(*,*) surfaceWater%sw_irr 
+    !write(*,*) " "
+
     CALL convert_length_to_volume
     CALL monthly_out_by_field(im)
     CALL write_MODFLOW_RCH(im,numdays,nrows,ncols,rch_zones)

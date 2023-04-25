@@ -309,6 +309,8 @@ MODULE SWBM_output
     write(124,'(i4,999F20.2)') im, landcover_delta_s(:)
     write(61,'(i4,999F20.2)') im, landcover_area(:)
 
+    !write(*,*) sum(monthly%tot_irr_vol)
+
     write(125,'(i4,8F20.0)') im, sum(monthly%effprecip_vol), (sum(monthly%tot_irr_vol)-sum(monthly%gw_irr_vol)), &
     sum(monthly%gw_irr_vol), -sum(monthly%aET_vol), -sum(monthly%recharge_vol), &
     -sum(monthly%runoff_vol), -sum(monthly%change_in_storage_vol) ,&
@@ -383,7 +385,7 @@ MODULE SWBM_output
     write(536,'(I10,I10,A28,I4)') nAgWells, n_wel_param, '               Stress Period',im           ! MFR and Ditches are active, use all WEL parameters
   else if (month == 6 .or. month == 7) then                                                           ! If June - July
     write(536,'(I10,I10,A28,I4)') nAgWells, n_wel_param-7, '               Stress Period',im         ! Only Ditches are active, subtract number of MFR segments represented
-  else if (month == 8 .or. month == 8) then                                                           ! If August-September
+  else if (month == 8 .or. month == 9) then                                                           ! If August-September
     write(536,'(I10,I10,A28,I4)') nAgWells, n_wel_param-9, '               Stress Period',im         ! Only Ditches are active, subtract number of MFR and Ditch segments represented                                              
   end if
     
@@ -739,13 +741,19 @@ MODULE SWBM_output
      write(213,'(I4,A12)')nSegs,'  1  0  0  0'      ! Positive value after nSegs suppresses printing of SFR input data to listing file
    end if
    
+   !write(*,'(A30)') "writing SFR_Routing%flow:"
+   !write(*,*) SFR_Routing%FLOW
+
    do i = 1, nSegs
+    !write(*,'(A20,I3,A3,es10.2)') "SFR_Routing%FLOW", i," : ", SFR_Routing(i)%FLOW
      if(SFR_Routing(i)%FLOW<0) SFR_Routing(i)%FLOW = 0   ! Remove negative flow rates caused by rounding errors
-     if(SFR_Routing(i)%IUPSEG == 0) then
-        write(213,'(I3,I3,I5,I5,2es10.2,A8,F5.3)')SFR_Routing(i)%NSEG, SFR_Routing(i)%ICALC, SFR_Routing(i)%OUTSEG,&
+     !write(*,'(A20,I3,A3,es10.2)') "SFR_Routing%FLOW", i," : ", SFR_Routing(i)%FLOW
+
+     if(SFR_Routing(i)%IUPSEG == 0) then ! If no upstream segment (i.e. segment is an inflow segment)
+        write(213,'(I3,I5,I5,I5,2es10.2,A8,F5.3)') SFR_Routing(i)%NSEG, SFR_Routing(i)%ICALC, SFR_Routing(i)%OUTSEG,&
              SFR_Routing(i)%IUPSEG, SFR_Routing(i)%FLOW, SFR_Routing(i)%RUNOFF,'  0  0  ', SFR_Routing(i)%MANNING_N
-      elseif(SFR_Routing(i)%IUPSEG > 0) then
-        write(213,'(I5,I3,I5,I5,I3,2es10.2,A8,F5.3)')SFR_Routing(i)%NSEG, SFR_Routing(i)%ICALC,& 
+      elseif(SFR_Routing(i)%IUPSEG > 0) then ! If upstream segment exists
+        write(213,'(I3,I5,I5,I5,I3,2es10.2,A8,F5.3)')SFR_Routing(i)%NSEG, SFR_Routing(i)%ICALC,& 
           SFR_Routing(i)%OUTSEG, SFR_Routing(i)%IUPSEG, SFR_Routing(i)%IPRIOR, SFR_Routing(i)%FLOW, &
           SFR_Routing(i)%RUNOFF,'  0  0  ', SFR_Routing(i)%MANNING_N
       endif

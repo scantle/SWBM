@@ -28,7 +28,7 @@ MODULE irrigation
     !DO i=1,6   ! read first 6 comments lines of SFR file into nothing
     !  read(10,*) 
     !ENDDO
-    read(10,*) dummy, nSegs
+    read(10,*) dummy, nSegs 
     close(10)
     ALLOCATE(SFR_Routing(nSegs)) ! Allocate arrays of length equal to number of SFR segments       
     ALLOCATE(SFR_allocation(nSFR_inflow_segs))                       ! Allocate array of length equal to number of segments where inflow is specified
@@ -78,6 +78,14 @@ MODULE irrigation
     read(215,*) date_dummy, (surfaceWater(i)%inflow_irr, i=1, nSubws)                            ! Read in date and irrigation inflow for each stream simulated
     read(216,*) date_dummy, (surfaceWater(i)%inflow_nonirr, i=1, nSubws)                         ! Read in date and irrigation inflow for each stream simulated
 
+    !write(*,*) nSubws
+    !write(*,*) "Inflow_irr:"
+    !write(*,*) surfaceWater%inflow_irr
+    !write(*,*) "sw_irr:"
+    !write(*,*) surfaceWater%sw_irr
+
+
+
     if (inflow_is_vol) then
     	surfaceWater%avail_sw_vol = surfaceWater%inflow_irr       ! Define available SW vol
     else 
@@ -85,16 +93,25 @@ MODULE irrigation
       surfaceWater%inflow_nonirr = surfaceWater%inflow_nonirr * numdays
       surfaceWater%avail_sw_vol = surfaceWater%inflow_irr * numdays           
     end if
+
+    !write(*,'(A60)') "surfaceWater attributes: Irr, nonIrr, SWIrr, availSW:"
+    !write(*,'(A30,es10.2,A3,es10.2,A3,es10.2,A3,es10.2,A3,es10.2)') "Irr, nonIrr, SWIrr, availSW:", &
+    !write(*,*) surfaceWater%inflow_irr
+    !write(*,*) surfaceWater%inflow_nonirr
+    !write(*,*) surfaceWater%sw_irr
+    !write(*,*) surfaceWater%avail_sw_vol
   end subroutine read_monthly_stream_inflow
   
 ! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   
-  subroutine SFR_streamflow(npoly,numdays, nSubws, nSegs, nSFR_inflow_segs)
+  subroutine SFR_streamflow(npoly,numdays, nSubws, nSegs, nSFR_inflow_segs, month)
     
     INTEGER, INTENT(IN) :: npoly, numdays, nSubws, nSegs, nSFR_inflow_segs
-    INTEGER :: i, temp_seg, temp_subws_ID
+    INTEGER :: i, temp_seg, temp_subws_ID, month
     REAL :: temp_flow
     
+    !write(*,*) SFR_Routing%FLOW
+
     SFR_Routing%FLOW = 0.                                          ! Reset all SFR flow to zero   
     DO i=1,nSFR_inflow_segs
       temp_subws_ID = SFR_allocation(i)%subws_ID
@@ -102,11 +119,16 @@ MODULE irrigation
       temp_flow = (surfaceWater(temp_subws_ID)%avail_sw_vol + &
       surfaceWater(temp_subws_ID)%inflow_nonirr)  &
       / numdays * SFR_allocation(i)%frac_subws_flow
+      !write(*,'(A20,I3, A20, es10.2)') "SFR inflow seg: " , SFR_allocation(i)%SFR_segment, "SFR flow: ", temp_flow
       SFR_Routing(temp_seg)%FLOW = temp_flow
       
     ENDDO
-    
-    SFR_Routing(div_segs)%FLOW = div_rate
+
+    if (month .ge. 4 .and. month .le. 7) then ! If April-July, when the ditches are running
+      SFR_Routing(div_segs)%FLOW = div_rate ! divert water from mainstem
+    else 
+      SFR_Routing(div_segs)%FLOW = 0 ! In Aug-Mar, divert no water
+    endif
       
     SFR_Routing%RUNOFF = 0.                                        ! Reset runoff to zero 
     DO i=1,npoly                                                   ! Sum runoff volumes for each SFR segment
@@ -118,10 +140,11 @@ MODULE irrigation
   end subroutine SFR_streamflow
   
   ! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  SUBROUTINE IRRIGATION_RULESET(ip, month, jday)
+  SUBROUTINE IRRIGATION_RULESET(ip, month, jday, irrigating)
   
     INTEGER, INTENT(IN) :: ip, month, jday
     INTEGER :: subws
+    LOGICAL :: irrigating
     REAL :: irreff   
           
     subws = fields(ip)%subws_ID
@@ -136,17 +159,22 @@ MODULE irrigation
       case(999)   ! Unknown irrigation - assign Wheel Line irr. eff.
   	  	irreff = crops(fields(ip)%landcover_id)%irreff_wl  
     end select
-    ! add mar volume calc step
+
+
     if ( (crops(fields(ip)%landcover_id)%irrigated .and. fields(ip)%irr_type /= 555) &                                         ! If field is irrigated
     .and. ((month == crops(fields(ip)%landcover_id)%IrrMonthStart .and. jday >= crops(fields(ip)%landcover_id)%IrrDayStart)&   ! and during defined irrigation season
     .or.  (month > crops(fields(ip)%landcover_id)%IrrMonthStart .and. month < crops(fields(ip)%landcover_id)%IrrMonthEnd)&
     .or.  (month == crops(fields(ip)%landcover_id)%IrrMonthEnd .and. jday <= crops(fields(ip)%landcover_id)%IrrDayEnd))& 
-    .and. daily(ip)%swc < crops(fields(ip)%landcover_id)%IrrSWC*fields(ip)%whc*crops(fields(ip)%landcover_id)%RootDepth) then        ! and SWC has dropped below defined irrigation trigger   	
-      daily(ip)%tot_irr=max(0.,((daily(ip)%pET-daily(ip)%effprecip)/irreff))                                                 ! Calculate applied linear irrigation 	 	
-      daily(ip)%tot_irr = daily(ip)%tot_irr - daily(ip)%tot_irr * fields(ip)%curtail_frac                                    ! Subtract curtailment fraction (default: 0) from calculated irr. demand
-      daily(ip)%tot_irr = daily(ip)%tot_irr + fields(ip)%mar_amount                                                          ! Add MAR volume (default: 0) to total irrigation
+    .and. ((daily(ip)%swc < crops(fields(ip)%landcover_id)%IrrSWC * fields(ip)%whc * crops(fields(ip)%landcover_id)%RootDepth) &
+    .or. irrigating .eqv. .true.) ) then ! and EITHER SWC has dropped below defined irrigation trigger OR all the neighbors are irrigating already
+          ! If all of the above are true, apply irrigation ruleset
+          fields(ip)%irr_flag = 1 ! Set field status to irrigating (even if already the case)
+          daily(ip)%tot_irr=max(0.,((daily(ip)%pET-daily(ip)%effprecip)/irreff))                                                 ! Calculate applied linear irrigation (depth units)
+          daily(ip)%tot_irr = daily(ip)%tot_irr * (1 - fields(ip)%curtail_frac)                                    ! Subtract curtailment fraction (default: 0) from calculated irr. demand
+          daily(ip)%tot_irr = daily(ip)%tot_irr + fields(ip)%mar_depth                                                          ! Add MAR depth (default: 0) to total irrigation
       select case (fields(ip)%water_source)                                                                                  ! Assign irrigation to water source
     		case(1) ! surface water
+          !write(*,'(a10,I3,A24,F16.4)') "subws:", subws, "subws avail sw vol: ", surfaceWater(subws)%avail_sw_vol
     			if (surfaceWater(subws)%avail_sw_vol >= (daily(ip)%tot_irr * fields(ip)%area)) then                                ! If available surface water exceeds demand
     			  surfaceWater(subws)%sw_irr = surfaceWater(subws)%sw_irr + (daily(ip)%tot_irr * fields(ip)%area)                  ! Add daily irrigation volume to total surface water irrigation 
     			  surfaceWater(subws)%avail_sw_vol = surfaceWater(subws)%avail_sw_vol - (daily(ip)%tot_irr * fields(ip)%area)      ! Update available surface water volume	
@@ -188,9 +216,6 @@ MODULE irrigation
     LOGICAL, INTENT(in)  :: MAR_active
     REAL:: rch
   
-    !write(*,'(A20, F6.2)') "daily_ip pET", daily(ip)%pET
-    !write(*,'(A20, F6.2)') "daily_ip effPrcp", daily(ip)%effprecip
-    !write(*,'(A20, F6.2)') "daily_ip totirr", daily(ip)%tot_irr
     daily(ip)%aET=min(daily(ip)%pET, previous(ip)%swc+daily(ip)%effprecip+daily(ip)%tot_irr)  ! Actual ET for field ip is the pET (if enough soil water) or sum of yesterday's SWC, today's eff. precip, and the total irrigation (if not enough soil water)
     daily(ip)%deficiency=daily(ip)%pET - daily(ip)%aET ! calculate crop water deficiency
     if (daily(ip)%aET > 0) daily(ip)%ET_active =  1   ! Set ET flag to 1 if ET is active that day

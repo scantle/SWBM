@@ -5,7 +5,7 @@ IMPLICIT NONE
 TYPE polygon
   INTEGER      :: SWBM_id, SWBM_LU, subws_ID, irr_type, well_idx, water_source, well_id
   INTEGER      :: nModelCells, landcover_id, irr_flag, WL2CP_year, runoff_ISEG
-  REAL         :: area, whc, init_fill_frac, max_infil_rate, precip_fact, mar_amount, curtail_frac
+  REAL         :: area, whc, init_fill_frac, max_infil_rate, precip_fact, mar_depth, curtail_frac
   LOGICAL      :: Irrigating, ILR, ILR_Active
 END TYPE
 
