@@ -39,7 +39,7 @@ PROGRAM SWBM
   CHARACTER(400) :: cmd
   CHARACTER(50), ALLOCATABLE, DIMENSION(:) :: daily_out_name
   INTEGER, DIMENSION(31) :: ET_Active
-  LOGICAL :: MAR_active, ILR_active, daily_out_flag, inflow_is_vol, ag_wells_specified
+  LOGICAL :: MAR_active, ILR_active, daily_out_flag, inflow_is_vol, ag_wells_specified, using_neighbor_irr_rule
   REAL :: eff_precip
  
   CALL cpu_time(start)
@@ -58,6 +58,7 @@ PROGRAM SWBM
   read(10, *) model_name, WYstart, npoly, nlandcover, nAgWells, nMuniWells, nSubws
   read(10, *) inflow_is_vol, nSFR_inflow_segs, nmonths, nrows, ncols
   read(10, *) RD_Mult, SFR_Template
+  read(10, *) using_neighbor_irr_rule ! Neighbor-irrigating rule: Do farmers look to neighbor behavior for irrigation onset [TRUE] or only own field's soil moisture [FALSE]
   close (10)
   print*, SFR_Template
   if (trim(SFR_Template)/='UCODE' .and. trim(SFR_Template)/='PEST') then 
@@ -203,18 +204,17 @@ PROGRAM SWBM
       read(79,*) date_text, crops(:)%daily_kc 
       daily%effprecip = stn_precip * fields%precip_fact
       daily%pET=ETo*crops(fields%landcover_id)%daily_kc * crops(fields%landcover_id)%kc_mult                        ! Set ET to current value for the day
-
-      if (daily(ip)%effprecip < (0.2*ETo)) daily(ip)%effprecip = 0  
+      if (daily(ip)%effprecip < (0.2*ETo)) daily(ip)%effprecip = 0  ! if precip is less than 20% of ET, assume precip is lost as evaporating dew and 0 precip inflitrates to soil zone
+      
       if(irrigating .eqv. .false.) then  ! if not irrigating yet, check number of fields irrigating
-          if(sum(fields%irr_flag)>=250) then
-            irrigating = .true.   ! If 20% of the fields are irrigating (by number, not area; 1251 irrigated fields), set logical to true
+          if(sum(fields%irr_flag)>=250 .and. using_neighbor_irr_rule .eqv. .TRUE.) then  ! Under the neighbor-irrigating rule,
+            irrigating = .true.  ! if 20% of the fields are irrigating (by number, not area; 1251 total irrigated fields), set logical to true
             write(*,'(A3,I4,A27,I2,A5,I2)') "in ", WY, ", irrigating started month ", month, " day " , jday
-            write(*,*) " "
+            !write(*,*) " "
         endif
       endif
 
       do ip=1, npoly
-    
         !if (ILR_active) then
           ! CALL IRRIGATION_ILR(ip, month, jday, eff_precip)
 	      !else

@@ -79,7 +79,7 @@ MODULE irrigation
     read(216,*) date_dummy, (surfaceWater(i)%inflow_nonirr, i=1, nSubws)                         ! Read in date and irrigation inflow for each stream simulated
 
     !write(*,*) nSubws
-    !write(*,*) "Inflow_irr:"
+    !write(*,*) "Inflow_irr, preconvert:"
     !write(*,*) surfaceWater%inflow_irr
     !write(*,*) "sw_irr:"
     !write(*,*) surfaceWater%sw_irr
@@ -91,7 +91,7 @@ MODULE irrigation
     else 
       surfaceWater%inflow_irr = surfaceWater%inflow_irr * numdays                                ! If inflow is an average monthly rate, convert to volume
       surfaceWater%inflow_nonirr = surfaceWater%inflow_nonirr * numdays
-      surfaceWater%avail_sw_vol = surfaceWater%inflow_irr * numdays           
+      surfaceWater%avail_sw_vol = surfaceWater%inflow_irr 
     end if
 
     !write(*,'(A60)') "surfaceWater attributes: Irr, nonIrr, SWIrr, availSW:"
@@ -99,6 +99,7 @@ MODULE irrigation
     !write(*,*) surfaceWater%inflow_irr
     !write(*,*) surfaceWater%inflow_nonirr
     !write(*,*) surfaceWater%sw_irr
+    !write(*,'(A60)') "AvailSW, after read_monthly_stream_inflow:"
     !write(*,*) surfaceWater%avail_sw_vol
   end subroutine read_monthly_stream_inflow
   
@@ -165,8 +166,8 @@ MODULE irrigation
     .and. ((month == crops(fields(ip)%landcover_id)%IrrMonthStart .and. jday >= crops(fields(ip)%landcover_id)%IrrDayStart)&   ! and during defined irrigation season
     .or.  (month > crops(fields(ip)%landcover_id)%IrrMonthStart .and. month < crops(fields(ip)%landcover_id)%IrrMonthEnd)&
     .or.  (month == crops(fields(ip)%landcover_id)%IrrMonthEnd .and. jday <= crops(fields(ip)%landcover_id)%IrrDayEnd))& 
-    .and. ((daily(ip)%swc < crops(fields(ip)%landcover_id)%IrrSWC * fields(ip)%whc * crops(fields(ip)%landcover_id)%RootDepth) &
-    .or. irrigating .eqv. .true.) ) then ! and EITHER SWC has dropped below defined irrigation trigger OR all the neighbors are irrigating already
+    .and. ((daily(ip)%swc < crops(fields(ip)%landcover_id)%IrrSWC * fields(ip)%whc * crops(fields(ip)%landcover_id)%RootDepth) & ! and EITHER SWC has dropped
+    .or. irrigating .eqv. .true.) ) then                         ! below defined irrigation trigger OR all the neighbors are irrigating already
           ! If all of the above are true, apply irrigation ruleset
           fields(ip)%irr_flag = 1 ! Set field status to irrigating (even if already the case)
           daily(ip)%tot_irr=max(0.,((daily(ip)%pET-daily(ip)%effprecip)/irreff))                                                 ! Calculate applied linear irrigation (depth units)
