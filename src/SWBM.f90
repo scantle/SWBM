@@ -27,7 +27,7 @@ PROGRAM SWBM
 
   INTEGER :: nmonths, numdays, WY, month, jday, i, im, nrows, ncols, ncmds, dummy, WYstart
   INTEGER :: n_wel_param, num_daily_out, unit_num, nSFR_inflow_segs!, num_MAR_fields
-  INTEGER, ALLOCATABLE, DIMENSION(:,:) :: rch_zones, Discharge_Zone_Cells
+  INTEGER, ALLOCATABLE, DIMENSION(:,:) :: rch_zones, ET_Zone_Cells, ET_Cells_ex_depth
   INTEGER, ALLOCATABLE, DIMENSION(:)   :: ip_daily_out, ndays, SFR_inflow_segs!, MAR_fields
   REAL :: stn_precip, Total_Ref_ET, MAR_vol
   REAL, ALLOCATABLE, DIMENSION(:)  :: drain_flow, max_MAR_field_rate, moisture_save
@@ -97,9 +97,13 @@ PROGRAM SWBM
   close(10)
   
   ALLOCATE(rch_zones(nrows,ncols))
-  ALLOCATE(Discharge_Zone_Cells(nrows,ncols))
+  ALLOCATE(ET_Zone_Cells(nrows,ncols))
   ALLOCATE(drain_flow(nmonths))
   
+  open(unit=218,file='ET_Zone_Cells.txt',status='old')      ! Read in 1-0 grid of cells with MODFLOW ET-from-groundwater zones
+  read(218,*) ET_Zone_Cells 
+  open(unit=219,file='ET_Cells_Extinction_Depth.txt',status='old')      ! Read in extinction depths for MODFLOW ET-from-groundwater zones
+  read(219,*) ET_Cells_ex_depth 
   open(unit=10,file='recharge_zones.txt',status='old')      ! Read in MODFLOW recharge zone matrix
   read(10,*) rch_zones
   close(10)
@@ -113,6 +117,7 @@ PROGRAM SWBM
   open(unit=82, file = 'polygon_landcover_ids.txt', status = 'old')
   read(82,*)  ! read header into nothing
 
+  MAR_active = .false. ! Need to get rid of this MAR_active artifact - mar depths gets read as an input file now
  if (MAR_active) then
 !    open(unit=10,file='MAR_Fields.txt',status='old')      ! Read in MAR recharge matrix
 !    read(10,*) num_MAR_fields, MAR_vol
@@ -133,7 +138,7 @@ PROGRAM SWBM
   read(87,*)  ! read header into nothing
   ! Input files specifying 1 value per stress period
   open(unit=887,file='precip.txt', status = 'old')
-  read(887,*)  ! read header into nothing                   
+  !read(887,*)  ! read header into nothing                   
   open(unit=88,file='ref_et.txt', status = 'old')
   read(88,*)  ! read header into nothing
   open(unit=79, file='kc_values.txt', status = 'old')   
@@ -149,7 +154,7 @@ PROGRAM SWBM
   	   read(599,*)ip_daily_out(i), daily_out_name(i)
   	   daily_out_name(i) = trim(daily_out_name(i)) // '_daily_out.dat'
   	   open(unit=unit_num, file=daily_out_name(i))
-  	   write(unit_num,*)'field_id  effective_precip  streamflow  SW_irrig  GW_irr  total_irr  rch  swc  pET',&
+  	   write(unit_num,*)'field_id  effective_precip  streamflow  SW_irrig  GW_irr  total_irr  rch  run  swc  pET',&
   	                    '  aET  deficiency  residual  field_capacity  subws_ID  SWBM_LU  landcover_id'    
     enddo
   endif
@@ -157,13 +162,14 @@ PROGRAM SWBM
   CALL output_files(model_name, daily_out_flag)
   open (unit=220, file='Drains_m3day.txt')
   read(220,*)                  ! Read header into nothing
-  fields%irr_flag = 0          ! Initialize tot_irr flag array
+  fields%irr_flag = 0          ! Initialize irrigating status flag array
   month = 10                   ! Initialize month variable to start in October
   
   ! open(unit=801, file= trim(model_name)//'.mnw2', Access = 'append', status='old')       
   WY = WYstart   ! water year
   do im=1, nmonths                ! Loop over each month
     read(82,*) date_text, fields(:)%landcover_id           ! read in landuse type (by field, for each month)
+    !write(*,*) fields(1)%landcover_id
     read(86,*) date_text, fields(:)%mar_depth     ! read in MAR application volumes (not driven by irrigation demand) (by field, for each month)
     read(87,*) date_text, fields(:)%curtail_frac   ! read in curtailment fractions  (by field, for each month)
    
@@ -179,16 +185,11 @@ PROGRAM SWBM
     numdays = ndays(im)        ! Number of days in the current month
     Total_Ref_ET = 0.          ! Reset monthly Average ET
     CALL zero_month                               ! Zero out monthly accumulated volume
-    !if (month==10) CALL zero_year                 ! If October zero out yearly accumulated volume                   
     CALL read_monthly_stream_inflow(inflow_is_vol, numdays)
     write(*,'(a15, i3,a13,i2,a18,i2)')'Stress Period: ',im,'   Month ID: ',month,'   Length (days): ', numdays
     write(800,'(a15, i3,a13,i2,a18,i2)')'Stress Period: ',im,'   Month ID: ',month,'   Length (days): ', numdays
+    
     read(220,*) drain_flow(im)                       ! Read drain flow into array         
-    !write(*,*) "pre-irrigation ruleset sw_avail"
-    !write(*,*) surfaceWater%avail_sw_vol
-    !write(*,*) "pre-irrigation ruleset sw_irr"
-    !write(*,*) surfaceWater%sw_irr 
-    !write(*,*) " "
     do jday=1, numdays                              ! Loop over days in each month
       if (jday==1) monthly%ET_active = 0            ! Set ET counter to 0 at the beginning of the month. Used for turning ET on and off in MODFLOW so it is not double counted.    
       daily%ET_active  = 0                          ! Reset ET active counter
@@ -199,11 +200,13 @@ PROGRAM SWBM
       daily%recharge = 0.                           ! Reset daily recharge value to zero 
       daily%runoff = 0.                             ! Reset daily runoff value to zero
       read(88,*)  ETo, ETo_in, date_text
-      Total_Ref_ET = Total_Ref_ET + ETo        ! Increment monthly ET rate         
+      Total_Ref_ET = Total_Ref_ET + ETo        ! Increment monthly ET rate  
       read(887,*) stn_precip
       read(79,*) date_text, crops(:)%daily_kc 
       daily%effprecip = stn_precip * fields%precip_fact
-      daily%pET=ETo*crops(fields%landcover_id)%daily_kc * crops(fields%landcover_id)%kc_mult                        ! Set ET to current value for the day
+      ! CUrrently here - checking pET for native veg land use
+      !write(*,'(A25,F4.2,F4.2)') "natveg k_c and kc_mult: ",crops(4)%daily_kc, crops(4)%kc_mult
+      daily%pET=ETo * crops(fields%landcover_id)%daily_kc * crops(fields%landcover_id)%kc_mult                        ! Set ET to current value for the day
       if (daily(ip)%effprecip < (0.2*ETo)) daily(ip)%effprecip = 0  ! if precip is less than 20% of ET, assume precip is lost as evaporating dew and 0 precip inflitrates to soil zone
       
       if(irrigating .eqv. .false.) then  ! if not irrigating yet, check number of fields irrigating
@@ -238,17 +241,11 @@ PROGRAM SWBM
         ann_spec_muni_vol = ann_spec_muni_vol + SUM(muni_wells%specified_volume)  ! add monthly specified volume to annual total
       endif
     enddo             ! End of day loop  
-    !write(*,*) "post-irrigation ruleset sw_avail"
-    !write(*,*) surfaceWater%avail_sw_vol
-    !write(*,*) "post-irrigation ruleset sw_irr"
-    !write(*,*) surfaceWater%sw_irr 
-    !write(*,*) " "
 
     CALL convert_length_to_volume
     CALL monthly_out_by_field(im)
     CALL write_MODFLOW_RCH(im,numdays,nrows,ncols,rch_zones)
-    CALL write_MODFLOW_ETS(im,numdays,nrows,ncols,rch_zones,Total_Ref_ET,Discharge_Zone_Cells,npoly)
-  !  SUBROUTINE write_MODFLOW_ETS(im,month,nday,nrows,ncols,rch_zones,Total_Ref_ET,Discharge_Zone_Cells, npoly)
+    CALL write_MODFLOW_ETS(im,numdays,nrows,ncols,rch_zones,Total_Ref_ET,ET_Zone_Cells, ET_Cells_ex_depth, npoly)
     CALL print_monthly_output(im, nlandcover, nSubws)
     CALL write_MODFLOW_SFR(im, nmonths, nSegs, model_name)
     CALL write_UCODE_SFR_template(im, nmonths, nSegs, model_name)   ! Write JTF file for UCODE 

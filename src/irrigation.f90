@@ -78,13 +78,6 @@ MODULE irrigation
     read(215,*) date_dummy, (surfaceWater(i)%inflow_irr, i=1, nSubws)                            ! Read in date and irrigation inflow for each stream simulated
     read(216,*) date_dummy, (surfaceWater(i)%inflow_nonirr, i=1, nSubws)                         ! Read in date and irrigation inflow for each stream simulated
 
-    !write(*,*) nSubws
-    !write(*,*) "Inflow_irr, preconvert:"
-    !write(*,*) surfaceWater%inflow_irr
-    !write(*,*) "sw_irr:"
-    !write(*,*) surfaceWater%sw_irr
-
-
 
     if (inflow_is_vol) then
     	surfaceWater%avail_sw_vol = surfaceWater%inflow_irr       ! Define available SW vol
@@ -157,26 +150,37 @@ MODULE irrigation
   	  	irreff = crops(fields(ip)%landcover_id)%irreff_wl
   	  case(3)   ! Center pivot irrigation
   	  	irreff = crops(fields(ip)%landcover_id)%irreff_cp
-      case(999)   ! Unknown irrigation - assign Wheel Line irr. eff.
-  	  	irreff = crops(fields(ip)%landcover_id)%irreff_wl  
+      case(999)   ! Unknown irrigation 
+        if( crops(fields(ip)%landcover_id)%irrigated ) then
+          irreff = crops(fields(ip)%landcover_id)%irreff_wl  ! assign Wheel Line irr. eff. for irrigated crops
+        else 
+          irreff = 1.0                                       ! Assign 100% efficiency for non-irrigated crops 
+        endif
     end select
 
+    !if(ip==1 .and. jday==10) then
+    !  write(*,'(A20,I3)') "Field 1 wat source", fields(ip)%water_source
+    !end if
 
-    if ( (crops(fields(ip)%landcover_id)%irrigated .and. fields(ip)%irr_type /= 555) &                                         ! If field is irrigated
+
+    if ( (crops(fields(ip)%landcover_id)%irrigated .and. fields(ip)%irr_type /= 555 .and.  fields(ip)%water_source /= 5) &     ! If field is irrigated
     .and. ((month == crops(fields(ip)%landcover_id)%IrrMonthStart .and. jday >= crops(fields(ip)%landcover_id)%IrrDayStart)&   ! and during defined irrigation season
     .or.  (month > crops(fields(ip)%landcover_id)%IrrMonthStart .and. month < crops(fields(ip)%landcover_id)%IrrMonthEnd)&
     .or.  (month == crops(fields(ip)%landcover_id)%IrrMonthEnd .and. jday <= crops(fields(ip)%landcover_id)%IrrDayEnd))& 
     .and. ((daily(ip)%swc < crops(fields(ip)%landcover_id)%IrrSWC * fields(ip)%whc * crops(fields(ip)%landcover_id)%RootDepth) & ! and EITHER SWC has dropped
-    .or. irrigating .eqv. .true.) ) then                         ! below defined irrigation trigger OR all the neighbors are irrigating already
+    .or. irrigating .eqv. .true.) ) then                         ! below defined irrigation trigger OR >20% of the neighbors are irrigating already
           ! If all of the above are true, apply irrigation ruleset
           fields(ip)%irr_flag = 1 ! Set field status to irrigating (even if already the case)
-          daily(ip)%tot_irr=max(0.,((daily(ip)%pET-daily(ip)%effprecip)/irreff))                                                 ! Calculate applied linear irrigation (depth units)
+          daily(ip)%tot_irr=max(0.,((daily(ip)%pET-daily(ip)%effprecip)/irreff))                                   ! Calculate applied linear irrigation (depth units)
           daily(ip)%tot_irr = daily(ip)%tot_irr * (1 - fields(ip)%curtail_frac)                                    ! Subtract curtailment fraction (default: 0) from calculated irr. demand
-          daily(ip)%tot_irr = daily(ip)%tot_irr + fields(ip)%mar_depth                                                          ! Add MAR depth (default: 0) to total irrigation
-      select case (fields(ip)%water_source)                                                                                  ! Assign irrigation to water source
+          daily(ip)%tot_irr = daily(ip)%tot_irr + fields(ip)%mar_depth                                             ! Add MAR depth (default: 0) to total irrigation
+      select case (fields(ip)%water_source)                                                                        ! Assign irrigation to water source
     		case(1) ! surface water
           !write(*,'(a10,I3,A24,F16.4)') "subws:", subws, "subws avail sw vol: ", surfaceWater(subws)%avail_sw_vol
+          !if(ip==1627) write(*,'(I4,F8.1)') jday, daily(ip)%tot_irr * fields(ip)%area
     			if (surfaceWater(subws)%avail_sw_vol >= (daily(ip)%tot_irr * fields(ip)%area)) then                                ! If available surface water exceeds demand
+            !write(*,*) "made it into the Avail_SW > demand loop"
+            !write(*,'(A15,I3, A7, I3)') "watersource: ", fields(ip)%water_source, "crop: ", fields(ip)%landcover_id
     			  surfaceWater(subws)%sw_irr = surfaceWater(subws)%sw_irr + (daily(ip)%tot_irr * fields(ip)%area)                  ! Add daily irrigation volume to total surface water irrigation 
     			  surfaceWater(subws)%avail_sw_vol = surfaceWater(subws)%avail_sw_vol - (daily(ip)%tot_irr * fields(ip)%area)      ! Update available surface water volume	
     			else if (surfaceWater(subws)%avail_sw_vol < (daily(ip)%tot_irr * fields(ip)%area) &                                  ! If supply is less than demand but greater than 0
@@ -187,24 +191,35 @@ MODULE irrigation
     			else
     				  daily(ip)%tot_irr = 0.                                                  ! Irrigation set to zero when surface-water supplies are exceeded 
     			end if
-    	case(2) ! Mixed Water Source
+    	  case(2) ! groundwater
+    	  	daily(ip)%gw_irr = daily(ip)%tot_irr  ! All irrigation assigned to groundwater well
+    	case(3) ! Mixed Water Source
     			if (surfaceWater(subws)%avail_sw_vol >= (daily(ip)%tot_irr * fields(ip)%area)) then                                ! If available surface water exceeds demand
     			  surfaceWater(subws)%sw_irr = surfaceWater(subws)%sw_irr + (daily(ip)%tot_irr * fields(ip)%area)                  ! Add daily irrigation volume to total surface water irrigation 
     			  surfaceWater(subws)%avail_sw_vol = surfaceWater(subws)%avail_sw_vol - (daily(ip)%tot_irr * fields(ip)%area)      ! Update available surface water volume	
     			else if (surfaceWater(subws)%avail_sw_vol < (daily(ip)%tot_irr * fields(ip)%area) &                                ! If supply is less than demand but greater than 0
     				 .and. surfaceWater(subws)%avail_sw_vol /= 0) then
             	surfaceWater(subws)%sw_irr = surfaceWater(subws)%sw_irr + surfaceWater(subws)%avail_sw_vol                     ! Use remaining surface water for irrigation
-            	surfaceWater(subws)%avail_sw_vol = 0.                                                                          ! Set remaining surface water to zero
             	daily(ip)%gw_irr = daily(ip)%tot_irr - (surfaceWater(subws)%avail_sw_vol / fields(ip)%area)                    ! Use GW for remainder of demand
-    			else
+            	surfaceWater(subws)%avail_sw_vol = 0.                                                                          ! Set remaining surface water to zero
+    			else !if (surfaceWater(subws)%avail_sw_vol == 0)
     				  daily(ip)%gw_irr =  daily(ip)%tot_irr                                   ! All irrigation assigned to groundwater well
     			end if 
-    	  case(3) ! groundwater
-    	  	daily(ip)%gw_irr = daily(ip)%tot_irr  ! All irrigation assigned to groundwater well
-    	  case(4) ! unknown, assume GW source
+    	  case(4) ! sub-irrigated
+    	  	daily(ip)%tot_irr = 0.  ! No irrigation applied
+        case(5) ! dry-farmed
+    	  	daily(ip)%tot_irr = 0.  ! No irrigation applied
+    	  case(999) ! unknown, assume GW source
     	  	daily(ip)%gw_irr = daily(ip)%tot_irr  ! All irrigation assigned to groundwater well
     	end select
     endif
+
+    !if(daily(ip)%gw_irr > 1000000) then ! if it's infinity
+    !  write(*,'(A25,I5)') "infinite GW on field id ", ip
+    !  write(*,'(A12,I6,A15,I4,A12,I5)') "landcover =", fields(ip)%landcover_id, &
+    !  "water_source =", fields(ip)%water_source, "irr_type =", fields(ip)%irr_type
+      !write(*, '(A33, I5)') "Crop, wat. src. and irr. type: " , fields(ip)%water_source, fields(ip)%irr_type
+    !endif
 
   END SUBROUTINE IRRIGATION_RULESET
   
@@ -222,14 +237,17 @@ MODULE irrigation
     if (daily(ip)%aET > 0) daily(ip)%ET_active =  1   ! Set ET flag to 1 if ET is active that day
     rch = max(0., (previous(ip)%swc+daily(ip)%effprecip+daily(ip)%tot_irr-daily(ip)%aET)-& ! Recharge is sum(yesterday's SWC, today's eff. precip, and today's total irrigation) minus today's aET, minus the field's water holding capacity
     fields(ip)%whc*crops(fields(ip)%landcover_id)%RootDepth)
-    if (rch > fields(ip)%max_infil_rate) then
-    	daily(ip)%runoff = (rch - fields(ip)%max_infil_rate) ! Calculate runoff if recharge exceeds field's max infiltration rate
-    	rch = fields(ip)%max_infil_rate
-    endif
+
+    ! Temporarily disabling the runoff calculation function for comparison to basecase
+    !if (rch > fields(ip)%max_infil_rate) then
+    !	daily(ip)%runoff = (rch - fields(ip)%max_infil_rate) ! Calculate runoff if recharge exceeds field's max infiltration rate
+   ! 	rch = fields(ip)%max_infil_rate
+    !endif
     daily(ip)%recharge = rch
-    daily(ip)%swc=max(0.,previous(ip)%swc+daily(ip)%effprecip+daily(ip)%tot_irr-daily(ip)%aET-daily(ip)%recharge-daily(ip)%runoff)
-    daily(ip)%residual = daily(ip)%swc-previous(ip)%swc+daily(ip)%aET+daily(ip)%recharge- &
-                       daily(ip)%effprecip-daily(ip)%tot_irr-daily(ip)%runoff       
+    daily(ip)%swc=max(0.,previous(ip)%swc+daily(ip)%effprecip+daily(ip)%tot_irr- & ! today's SWC = yesterday's SWC + today's precip + irrigation 
+      daily(ip)%aET-daily(ip)%recharge-daily(ip)%runoff)                           !- aET - recharge - runoff
+    daily(ip)%residual = daily(ip)%swc-previous(ip)%swc+daily(ip)%aET+daily(ip)%recharge+daily(ip)%runoff- &
+                       daily(ip)%effprecip-daily(ip)%tot_irr       
     if (MAR_active) moisture_save(ip) = previous(ip)%swc 
     previous(ip)%swc = daily(ip)%swc
     daily(ip)%change_in_storage = daily(ip)%effprecip+daily(ip)%tot_irr-daily(ip)%aET-daily(ip)%recharge-daily(ip)%runoff	

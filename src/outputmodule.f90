@@ -172,7 +172,10 @@ MODULE SWBM_output
    monthly%change_in_storage = monthly%change_in_storage + daily%change_in_storage    ! Add daily linear change in storage to monthly total    
    monthly%MAR_vol = monthly%MAR_vol + daily%MAR_vol                                  ! Add daily linear MAR volume to monthly total
    monthly%runoff = monthly%runoff + daily%runoff                                    
-  
+
+   !    write(*,*) sum(monthly%gw_irr_vol)
+   !write(*,*) monthly%gw_irr_vol
+
   END SUBROUTINE monthly_SUM
   
 !  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -310,6 +313,7 @@ MODULE SWBM_output
     write(61,'(i4,999F20.2)') im, landcover_area(:)
 
     !write(*,*) sum(monthly%tot_irr_vol)
+    !write(*,*) sum(monthly%gw_irr_vol)
 
     write(125,'(i4,8F20.0)') im, sum(monthly%effprecip_vol), (sum(monthly%tot_irr_vol)-sum(monthly%gw_irr_vol)), &
     sum(monthly%gw_irr_vol), -sum(monthly%aET_vol), -sum(monthly%recharge_vol), &
@@ -336,7 +340,8 @@ MODULE SWBM_output
      endif 
      
      do i=1, npoly
-     	 if(fields(i)%water_source==1 .or. fields(i)%irr_type==555 .or. fields(i)%well_idx==0) then     ! If SW irrigated field or non-irrigated
+     	 if(fields(i)%water_source==1 .or. fields(i)%water_source==5 &      ! If SW irrigated or dry-farmed
+       .or. fields(i)%irr_type==555 .or. fields(i)%well_idx==0 ) then     ! or non-irrigated
      	 	 ! do nothing
      	 else 
      	   ag_wells(fields(i)%well_idx)%daily_vol =   daily(i)%gw_irr*fields(i)%area               ! assign daily gw_irr volume   
@@ -492,13 +497,15 @@ MODULE SWBM_output
      
      do i=1,num_daily_out
        unit_num = 599+i
-       write(unit_num,'(i5,12F10.6,3i4)') ip_daily_out(i), daily(ip_daily_out(i))%effprecip, &
+       write(unit_num,'(i5,1F10.6,1F17.6,11F10.6,3i4)') ip_daily_out(i), daily(ip_daily_out(i))%effprecip, &
          surfaceWater(fields(ip_daily_out(i))%subws_ID)%avail_sw_vol,&
          daily(ip_daily_out(i))%tot_irr - daily(ip_daily_out(i))%gw_irr,&
-         daily(ip_daily_out(i))%gw_irr, daily(ip_daily_out(i))%tot_irr, daily(ip_daily_out(i))%recharge, &
+         daily(ip_daily_out(i))%gw_irr, daily(ip_daily_out(i))%tot_irr, &
+         daily(ip_daily_out(i))%recharge, daily(ip_daily_out(i))%runoff, &
          daily(ip_daily_out(i))%swc, daily(ip_daily_out(i))%pET,  daily(ip_daily_out(i))%aET, &
-         daily(ip_daily_out(i))%deficiency, daily(ip_daily_out(i))%residual,fields(ip_daily_out(i))%whc*&
-         crops(fields(ip_daily_out(i))%landcover_id)%RootDepth,fields(ip_daily_out(i))%subws_ID, &
+         daily(ip_daily_out(i))%deficiency, daily(ip_daily_out(i))%residual, &
+         fields(ip_daily_out(i))%whc*crops(fields(ip_daily_out(i))%landcover_id)%RootDepth, &
+         fields(ip_daily_out(i))%subws_ID, &
          fields(ip_daily_out(i))%SWBM_LU, fields(ip_daily_out(i))%landcover_id
      enddo                                                                                              ! Field IDs for Daily Output
    END SUBROUTINE daily_out
@@ -549,16 +556,17 @@ MODULE SWBM_output
    END SUBROUTINE print_annual
      
 !  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     SUBROUTINE write_MODFLOW_ETS(im,numdays,nrows,ncols,rch_zones,Total_Ref_ET,Discharge_Zone_Cells, npoly)
+     SUBROUTINE write_MODFLOW_ETS(im,numdays,nrows,ncols,rch_zones,Total_Ref_ET,ET_Zone_Cells, ET_Cells_ex_depth, npoly)
      
      INTEGER, INTENT(IN) :: im,nrows,ncols, npoly !,month
-     INTEGER, INTENT(IN) :: rch_zones(nrows,ncols), Discharge_Zone_Cells(nrows,ncols) !,nday(0:11)
+     INTEGER, INTENT(IN) :: rch_zones(nrows,ncols), ET_Zone_Cells(nrows,ncols), ET_Cells_ex_depth(nrows,ncols)!,nday(0:11)
      REAL, INTENT(IN) :: Total_Ref_ET
      REAL :: Avg_Ref_ET
      REAL, DIMENSION(npoly) :: ET_fraction
      INTEGER :: ip, numdays
      REAL, DIMENSION(nrows,ncols) :: Extinction_depth_matrix, ET_matrix_out
      
+     ! surgery - passing deficiency
      ET_matrix_out = 0.
      Avg_Ref_ET = Total_Ref_ET/real(numdays)                                                   ! Calculate average Reference ET for populating ET package
      
@@ -566,13 +574,13 @@ MODULE SWBM_output
        ET_fraction(ip) = monthly(ip)%ET_active / real(numdays) 
        where (rch_zones(:,:) == ip)
          ET_matrix_out(:,:) = Avg_Ref_ET * (1 - ET_fraction(ip))  ! Scale Average monthly ET by the number of days ET was not active on the field.
-         Extinction_depth_matrix(:,:) = 0.5
+         !Extinction_depth_matrix(:,:) = 0.5 ! someday make this a readable parameter for natveg scenarios
        end where
      enddo
-     
-     ET_matrix_out = ET_matrix_out * Discharge_Zone_Cells
-     Extinction_depth_matrix = Extinction_depth_matrix 
-     
+
+     ET_matrix_out = ET_matrix_out * ET_Zone_Cells ! Only keeps ET values where ET from GW is active (cell value of 1)
+     !Extinction_depth_matrix = ET_Cells_ex_depth * ET_Zone_Cells  
+
      if (im==1) then
      	open(unit=83, file='SVIHM.ets', status = 'old', position = 'append')
      	write(83, *)"       20   1.00000(10e14.6)                   -1     ET RATE"
@@ -588,6 +596,7 @@ MODULE SWBM_output
        write(83,*)'       20   1.00000(10e14.6)                   -1     ET DEPTH'
        write(83,'(10e14.6)') Extinction_depth_matrix  ! Write ET Extinction Depth
      end if
+
      END SUBROUTINE write_MODFLOW_ETS	
      
 ! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -698,6 +707,8 @@ MODULE SWBM_output
 ! !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	   
    SUBROUTINE convert_length_to_volume
+
+    !write(*,*) sum(monthly%gw_irr_vol)
      
      monthly%tot_irr_vol	=	monthly%tot_irr*fields%area
      monthly%pET_vol	=	monthly%pET*fields%area
@@ -741,11 +752,7 @@ MODULE SWBM_output
      write(213,'(I4,A12)')nSegs,'  1  0  0  0'      ! Positive value after nSegs suppresses printing of SFR input data to listing file
    end if
    
-   !write(*,'(A30)') "writing SFR_Routing%flow:"
-   !write(*,*) SFR_Routing%FLOW
-
    do i = 1, nSegs
-    !write(*,'(A20,I3,A3,es10.2)') "SFR_Routing%FLOW", i," : ", SFR_Routing(i)%FLOW
      if(SFR_Routing(i)%FLOW<0) SFR_Routing(i)%FLOW = 0   ! Remove negative flow rates caused by rounding errors
      !write(*,'(A20,I3,A3,es10.2)') "SFR_Routing%FLOW", i," : ", SFR_Routing(i)%FLOW
 

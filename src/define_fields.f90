@@ -89,7 +89,8 @@ SUBROUTINE readpoly(npoly, nrows, ncols, rch_zones)
           fields(i)%irr_type = 2                ! Change unknown irrigation type to wheel line
         end if
         if (fields(i)%water_source == 999) then 
-          fields(i)%irr_type = 2                ! Change unknown water source to groundwater
+          !fields(i)%irr_type = 2                ! Change unknown water source to groundwater
+          fields(i)%water_source = 2                ! Change unknown water source to groundwater
         end if
       read(11,*)dummy, fields(i)%precip_fact
       dummy_mat = 0
@@ -239,6 +240,7 @@ subroutine initial_conditions
   do i=1, npoly
     daily(i)%swc  = fields(i)%whc * crops(fields(i)%landcover_id)%RootDepth * fields(i)%init_fill_frac
   enddo 
+  !write(*,*) fields(1)%whc
   previous%swc = daily%swc     ! Set previous day's swc to same as initial condition
       
 end subroutine initial_conditions
