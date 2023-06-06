@@ -423,7 +423,9 @@ MODULE SWBM_output
     write(536,*)'  FRMRSDitch'
     write(536,*)'  SVIDDitch'
   end if
-    
+  
+  close(536)
+  
   END SUBROUTINE  write_MODFLOW_WEL
 !  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
   SUBROUTINE write_MODFLOW_MNW2(im, nAgWells, nMuniWells, ag_wells_specified)

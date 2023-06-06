@@ -207,7 +207,6 @@ PROGRAM SWBM
       ! CUrrently here - checking pET for native veg land use
       !write(*,'(A25,F4.2,F4.2)') "natveg k_c and kc_mult: ",crops(4)%daily_kc, crops(4)%kc_mult
       daily%pET=ETo * crops(fields%landcover_id)%daily_kc * crops(fields%landcover_id)%kc_mult                        ! Set ET to current value for the day
-      if (daily(ip)%effprecip < (0.2*ETo)) daily(ip)%effprecip = 0  ! if precip is less than 20% of ET, assume precip is lost as evaporating dew and 0 precip inflitrates to soil zone
       
       if(irrigating .eqv. .false.) then  ! if not irrigating yet, check number of fields irrigating
           if(sum(fields%irr_flag)>=250 .and. using_neighbor_irr_rule .eqv. .TRUE.) then  ! Under the neighbor-irrigating rule,
@@ -218,6 +217,7 @@ PROGRAM SWBM
       endif
 
       do ip=1, npoly
+        if (daily(ip)%effprecip < (0.2*ETo)) daily(ip)%effprecip = 0  ! if precip is less than 20% of ET, assume precip is lost as evaporating dew and 0 precip inflitrates to soil zone
         !if (ILR_active) then
           ! CALL IRRIGATION_ILR(ip, month, jday, eff_precip)
 	      !else
@@ -256,7 +256,7 @@ PROGRAM SWBM
       WY = WY +1
     endif
     month = month + 1
-    call flush
+!    call flush
   enddo                  ! End of month loop
   CALL cpu_time(finish)
   write(*,'(A23,F6.2,A8)')'Model run completed in ',((finish-start)/60),' minutes'
