@@ -27,8 +27,9 @@ PROGRAM SWBM
 
   INTEGER :: nmonths, numdays, WY, month, jday, i, im, nrows, ncols, ncmds, dummy, WYstart
   INTEGER :: n_wel_param, num_daily_out, unit_num, nSFR_inflow_segs!, num_MAR_fields
-  INTEGER, ALLOCATABLE, DIMENSION(:,:) :: rch_zones, ET_Zone_Cells, ET_Cells_ex_depth
+  INTEGER, ALLOCATABLE, DIMENSION(:,:) :: rch_zones, ET_Zone_Cells
   INTEGER, ALLOCATABLE, DIMENSION(:)   :: ip_daily_out, ndays, SFR_inflow_segs!, MAR_fields
+  REAL, ALLOCATABLE, DIMENSION(:,:) :: ET_Cells_ex_depth
   REAL :: stn_precip, Total_Ref_ET, MAR_vol
   REAL, ALLOCATABLE, DIMENSION(:)  :: drain_flow, max_MAR_field_rate, moisture_save
   REAL :: start, finish
@@ -98,6 +99,7 @@ PROGRAM SWBM
   
   ALLOCATE(rch_zones(nrows,ncols))
   ALLOCATE(ET_Zone_Cells(nrows,ncols))
+  ALLOCATE(ET_Cells_ex_depth(nrows,ncols))
   ALLOCATE(drain_flow(nmonths))
   
   open(unit=218,file='ET_Zone_Cells.txt',status='old')      ! Read in 1-0 grid of cells with MODFLOW ET-from-groundwater zones

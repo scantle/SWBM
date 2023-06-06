@@ -561,12 +561,12 @@ MODULE SWBM_output
      SUBROUTINE write_MODFLOW_ETS(im,numdays,nrows,ncols,rch_zones,Total_Ref_ET,ET_Zone_Cells, ET_Cells_ex_depth, npoly)
      
      INTEGER, INTENT(IN) :: im,nrows,ncols, npoly !,month
-     INTEGER, INTENT(IN) :: rch_zones(nrows,ncols), ET_Zone_Cells(nrows,ncols), ET_Cells_ex_depth(nrows,ncols)!,nday(0:11)
+     INTEGER, INTENT(IN) :: rch_zones(nrows,ncols), ET_Zone_Cells(nrows,ncols) !,nday(0:11)
      REAL, INTENT(IN) :: Total_Ref_ET
      REAL :: Avg_Ref_ET
      REAL, DIMENSION(npoly) :: ET_fraction
      INTEGER :: ip, numdays
-     REAL, DIMENSION(nrows,ncols) :: Extinction_depth_matrix, ET_matrix_out
+     REAL, DIMENSION(nrows,ncols) :: ET_Cells_ex_depth(nrows,ncols), ET_matrix_out !Extinction_depth_matrix,
      
      ! surgery - passing deficiency
      ET_matrix_out = 0.
@@ -576,19 +576,18 @@ MODULE SWBM_output
        ET_fraction(ip) = monthly(ip)%ET_active / real(numdays) 
        where (rch_zones(:,:) == ip)
          ET_matrix_out(:,:) = Avg_Ref_ET * (1 - ET_fraction(ip))  ! Scale Average monthly ET by the number of days ET was not active on the field.
-         !Extinction_depth_matrix(:,:) = 0.5 ! someday make this a readable parameter for natveg scenarios
        end where
      enddo
 
      ET_matrix_out = ET_matrix_out * ET_Zone_Cells ! Only keeps ET values where ET from GW is active (cell value of 1)
-     !Extinction_depth_matrix = ET_Cells_ex_depth * ET_Zone_Cells  
+     !write(*,*) ET_Cells_ex_depth
 
      if (im==1) then
      	open(unit=83, file='SVIHM.ets', status = 'old', position = 'append')
      	write(83, *)"       20   1.00000(10e14.6)                   -1     ET RATE"
        write(83,'(10e14.6)') ET_matrix_out                ! Write Max ET Rates 
        write(83,*)'       20   1.00000(10e14.6)                   -1     ET DEPTH'
-       write(83,'(10e14.6)') Extinction_depth_matrix  ! Write ET Extinction Depth
+       write(83,'(10e14.6)') ET_Cells_ex_depth  ! Write ET Extinction Depth
        write(83,*)'        05.0000e-01(20F6.3)                    -1     PXDP Segment 1'    ! Linear decrease in ET from land surface to 0.5 m below surface
        write(83,*)'        05.0000e-01(20F6.3)                    -1     PETM Segment 1'    ! Linear decrease in ET from land surface to 0.5 m below surface
      else
@@ -596,7 +595,7 @@ MODULE SWBM_output
        write(83, *)"       20   1.00000(10e14.6)                   -1     ET RATE"
        write(83,'(10e14.6)') ET_matrix_out                ! Write Max ET Rates 
        write(83,*)'       20   1.00000(10e14.6)                   -1     ET DEPTH'
-       write(83,'(10e14.6)') Extinction_depth_matrix  ! Write ET Extinction Depth
+       write(83,'(10e14.6)') ET_Cells_ex_depth  ! Write ET Extinction Depth
      end if
 
      END SUBROUTINE write_MODFLOW_ETS	
