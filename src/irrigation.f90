@@ -9,7 +9,7 @@ MODULE irrigation
   REAL :: AV_REF_ET_1a, AV_REF_ET_1b, AV_REF_ET_2, ETo, ETo_in
   REAL :: monthly_precip_vol
   REAL :: EF_SF_Ratio, Sugar_Ratio, Johnson_Ratio, Crystal_Ratio, Patterson_Ratio
-  LOGICAL :: irrigating
+  LOGICAL :: irrigating, abs_irr_date_passed
   INTEGER  :: nSegs, nSubws, nSFRdiv
   INTEGER, ALLOCATABLE, DIMENSION(:)   :: div_segs, div_IPRIOR
   REAL, ALLOCATABLE, DIMENSION(:)  :: div_rate
@@ -168,7 +168,7 @@ MODULE irrigation
     .or.  (month > crops(fields(ip)%landcover_id)%IrrMonthStart .and. month < crops(fields(ip)%landcover_id)%IrrMonthEnd)&
     .or.  (month == crops(fields(ip)%landcover_id)%IrrMonthEnd .and. jday <= crops(fields(ip)%landcover_id)%IrrDayEnd))& 
     .and. ((daily(ip)%swc < crops(fields(ip)%landcover_id)%IrrSWC * fields(ip)%whc * crops(fields(ip)%landcover_id)%RootDepth) & ! and EITHER SWC has dropped
-    .or. irrigating .eqv. .true.) ) then                         ! below defined irrigation trigger OR >20% of the neighbors are irrigating already
+    .or. irrigating .or. abs_irr_date_passed) ) then                         ! below defined irrigation trigger OR >20% of the neighbors are irrigating already
           ! If all of the above are true, apply irrigation ruleset
           fields(ip)%irr_flag = 1 ! Set field status to irrigating (even if already the case)
           daily(ip)%tot_irr=max(0.,((daily(ip)%pET-daily(ip)%effprecip)/irreff))                                   ! Calculate applied linear irrigation (depth units)

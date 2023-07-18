@@ -217,6 +217,10 @@ PROGRAM SWBM
             !write(*,*) " "
         endif
       endif
+      
+      if (abs_irr_date_passed == .false. .and. month==5.and.jday>=15) then
+          abs_irr_date_passed = .TRUE.
+      end if
 
       do ip=1, npoly
         if (daily(ip)%effprecip < (0.2*ETo)) daily(ip)%effprecip = 0  ! if precip is less than 20% of ET, assume precip is lost as evaporating dew and 0 precip inflitrates to soil zone
@@ -228,7 +232,8 @@ PROGRAM SWBM
 	      CALL water_budget(ip,jday,month,moisture_save,MAR_active)   
         if (month==12 .and. jday==31 .and. ip==npoly) then               ! If last day of the year, set tot_irr flags and logical to zero
 		      fields%irr_flag = 0         
-		      irrigating = .false.           
+		      irrigating = .false.
+          abs_irr_date_passed = .false.
  	        CALL IRR2CP(WY)                          ! Convert fields to center pivot irrigation
 	      endif
        enddo              ! End of polygon loop! if (MAR_active) then 
