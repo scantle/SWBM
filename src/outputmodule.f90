@@ -499,6 +499,7 @@ MODULE SWBM_output
      
      do i=1,num_daily_out
        unit_num = 599+i
+       !'field_id  effective_precip  streamflow  SW_irrig  GW_irr  total_irr  rch  run  swc  pET aET  deficiency  residual  field_capacity  subws_ID  SWBM_LU  landcover_id'  
        write(unit_num,'(i5,1F10.6,1F17.6,11F10.6,3i4)') ip_daily_out(i), daily(ip_daily_out(i))%effprecip, &
          surfaceWater(fields(ip_daily_out(i))%subws_ID)%avail_sw_vol,&
          daily(ip_daily_out(i))%tot_irr - daily(ip_daily_out(i))%gw_irr,&

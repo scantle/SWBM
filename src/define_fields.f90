@@ -32,7 +32,7 @@ TYPE crop_table
 END TYPE
 
 TYPE surface_water
-    REAL :: inflow_irr, inflow_nonirr, sw_irr, avail_sw_vol
+    REAL*8 :: inflow_irr, inflow_nonirr, sw_irr, avail_sw_vol
 END TYPE
 
 TYPE subws_flow_partitioning
@@ -88,6 +88,9 @@ SUBROUTINE readpoly(npoly, nrows, ncols, rch_zones)
         if (fields(i)%irr_type == 999) then 
           fields(i)%irr_type = 2                ! Change unknown irrigation type to wheel line
         end if
+        if (fields(i)%irr_type == 555) then       ! Change non-irrigated field to dry irrigation type (to match old SWBM - LS)
+           fields(i)%water_source = 5
+        endif
         if (fields(i)%water_source == 999) then 
           !fields(i)%irr_type = 2                ! Change unknown water source to groundwater
           fields(i)%water_source = 2                ! Change unknown water source to groundwater
@@ -237,9 +240,9 @@ subroutine initial_conditions
   previous%effprecip = 0.
   previous%change_in_storage = 0.
   
-  do i=1, npoly
-    daily(i)%swc  = fields(i)%whc * crops(fields(i)%landcover_id)%RootDepth * fields(i)%init_fill_frac
-  enddo 
+  !LS vectorized for efficiency
+  daily(:)%swc  = fields(:)%whc * crops(fields(:)%landcover_id)%RootDepth * fields(:)%init_fill_frac
+  
   !write(*,*) fields(1)%whc
   previous%swc = daily%swc     ! Set previous day's swc to same as initial condition
       

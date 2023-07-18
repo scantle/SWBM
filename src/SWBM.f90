@@ -156,7 +156,7 @@ PROGRAM SWBM
   	   read(599,*)ip_daily_out(i), daily_out_name(i)
   	   daily_out_name(i) = trim(daily_out_name(i)) // '_daily_out.dat'
   	   open(unit=unit_num, file=daily_out_name(i))
-  	   write(unit_num,*)'field_id  effective_precip  streamflow  SW_irrig  GW_irr  total_irr  rch  run  swc  pET',&
+  	   write(unit_num,'(2a)')'field_id  effective_precip  streamflow  SW_irrig  GW_irr  total_irr  rch  run  swc  pET',&
   	                    '  aET  deficiency  residual  field_capacity  subws_ID  SWBM_LU  landcover_id'    
     enddo
   endif
