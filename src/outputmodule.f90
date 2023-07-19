@@ -759,10 +759,10 @@ MODULE SWBM_output
      !write(*,'(A20,I3,A3,es10.2)') "SFR_Routing%FLOW", i," : ", SFR_Routing(i)%FLOW
 
      if(SFR_Routing(i)%IUPSEG == 0) then ! If no upstream segment (i.e. segment is an inflow segment)
-        write(213,'(I3,I5,I5,I5,2es10.2,A8,F5.3)') SFR_Routing(i)%NSEG, SFR_Routing(i)%ICALC, SFR_Routing(i)%OUTSEG,&
+        write(213,'(I3,I5,I5,I5,2es14.6,A8,F5.3)') SFR_Routing(i)%NSEG, SFR_Routing(i)%ICALC, SFR_Routing(i)%OUTSEG,&
              SFR_Routing(i)%IUPSEG, SFR_Routing(i)%FLOW, SFR_Routing(i)%RUNOFF,'  0  0  ', SFR_Routing(i)%MANNING_N
       elseif(SFR_Routing(i)%IUPSEG > 0) then ! If upstream segment exists
-        write(213,'(I3,I5,I5,I5,I3,2es10.2,A8,F5.3)')SFR_Routing(i)%NSEG, SFR_Routing(i)%ICALC,& 
+        write(213,'(I3,I5,I5,I5,I3,2es14.6,A8,F5.3)')SFR_Routing(i)%NSEG, SFR_Routing(i)%ICALC,& 
           SFR_Routing(i)%OUTSEG, SFR_Routing(i)%IUPSEG, SFR_Routing(i)%IPRIOR, SFR_Routing(i)%FLOW, &
           SFR_Routing(i)%RUNOFF,'  0  0  ', SFR_Routing(i)%MANNING_N
       endif
@@ -792,10 +792,10 @@ MODULE SWBM_output
    do i = 1, nSegs   	
    	    if(SFR_Routing(i)%FLOW<0) SFR_Routing(i)%FLOW = 0   ! Remove negative flow rates caused by rounding errors
    	    if(SFR_Routing(i)%IUPSEG == 0) then
-           write(214,'(I3,I3,I5,I5,es10.2,A11,A1,A20,A1)')SFR_Routing(i)%NSEG, SFR_Routing(i)%ICALC, SFR_Routing(i)%OUTSEG,&
+           write(214,'(I3,I3,I5,I5,es14.6,A11,A1,A20,A1)')SFR_Routing(i)%NSEG, SFR_Routing(i)%ICALC, SFR_Routing(i)%OUTSEG,&
                 SFR_Routing(i)%IUPSEG, SFR_Routing(i)%FLOW,'  0  0  0  ', '@',SFR_Routing(i)%Manning_n_Param, '@'
          elseif(SFR_Routing(i)%IUPSEG > 0) then
-           write(214,'(I5,I3,I5,I5,I3,es10.2,A11,A1,A20,A1)')SFR_Routing(i)%NSEG, SFR_Routing(i)%ICALC,& 
+           write(214,'(I5,I3,I5,I5,I3,es14.6,A11,A1,A20,A1)')SFR_Routing(i)%NSEG, SFR_Routing(i)%ICALC,& 
                 SFR_Routing(i)%OUTSEG, SFR_Routing(i)%IUPSEG, SFR_Routing(i)%IPRIOR, SFR_Routing(i)%FLOW,'  0  0  0  ',&
                 '@', SFR_Routing(i)%Manning_n_Param, '@'
          endif
