@@ -159,7 +159,8 @@ SUBROUTINE initialize_wells(npoly, nAgWells, nMuniWells)
     endif
   enddo 
   close(10)
-  fields%well_id = 0 ! Not sure what this is for? Why reset the well_id? Declare this as an attribute of fields?
+  fields%well_id = 0
+  fields%well_idx = 0
   open(unit=10, file="ag_well_list_by_polygon.txt", status="old")                                                                                                                                                                                                                         
   read(10,*)  ! read header into nothing
   write(800,*)'SWBM_ID  Well_ID  WELL_IDX'
@@ -167,9 +168,9 @@ SUBROUTINE initialize_wells(npoly, nAgWells, nMuniWells)
     read(10,*) poly_id, well_id                                                                     
     do j = 1, nAgWells                                                                      
       if (poly_id==fields(i)%SWBM_id) fields(i)%well_id = well_id
-      if (well_id==ag_wells(j)%well_id) fields(i)%well_idx = j                             
+      if (well_id==ag_wells(j)%well_id) fields(i)%well_idx = j
     enddo
-  write(800,'(3i6)') fields(i)%SWBM_id, fields(i)%well_id, fields(i)%well_idx 
+  write(800,'(3i8)') fields(i)%SWBM_id, fields(i)%well_id, fields(i)%well_idx 
   enddo
   close(10)
   open(unit=10, file="muni_well_summary.txt", status="old")                                 

@@ -118,11 +118,11 @@ MODULE irrigation
       
     ENDDO
 
-    if (month .ge. 4 .and. month .le. 7) then ! If April-July, when the ditches are running
-      SFR_Routing(div_segs)%FLOW = div_rate ! divert water from mainstem
-    else 
-      SFR_Routing(div_segs)%FLOW = 0 ! In Aug-Mar, divert no water
-    endif
+    !if (month .ge. 4 .and. month .le. 7) then ! If April-July, when the ditches are running
+    !  SFR_Routing(div_segs)%FLOW = div_rate ! divert water from mainstem
+    !else 
+    !  SFR_Routing(div_segs)%FLOW = 0 ! In Aug-Mar, divert no water
+    !endif
       
     SFR_Routing%RUNOFF = 0.                                        ! Reset runoff to zero 
     DO i=1,npoly                                                   ! Sum runoff volumes for each SFR segment

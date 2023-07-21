@@ -373,35 +373,42 @@ MODULE SWBM_output
      
 !  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   SUBROUTINE write_MODFLOW_WEL(im, month, nAgWells, n_wel_param, model_name)
+  use ditch_module, only: write_ditch_wells, nditch_wells
     
   INTEGER, INTENT(IN) :: im, month, nAgWells, n_wel_param
   CHARACTER(20), INTENT(IN) :: model_name
   CHARACTER(30) :: filename
   !CHARACTER(24) :: wel_file
-  INTEGER :: i, well_idx
+  INTEGER :: i, well_idx, nwells_out
+  
+  nwells_out = nditch_wells(month) + nAgWells
   
   filename = trim(model_name) // '.wel'
 
   open(unit=536, file= filename, Access = 'append', status='old')
   if (month == 10 .or. month == 11 .or. month == 12 .or. month == 1 .or. &                              ! If October-March
       month == 2 .or. month == 3) then
-    write(536,'(I10,I10,A28,I4)') nAgWells, n_wel_param-2, '               Stress Period',im         ! Only MFR is active, subtract number of ditches represented 
+    write(536,'(I10,I10,A28,I4)') nwells_out, n_wel_param, '               Stress Period',im         ! Only MFR is active, subtract number of ditches represented 
   else if (month == 4 .or. month == 5) then                                                            ! If April-May
-    write(536,'(I10,I10,A28,I4)') nAgWells, n_wel_param, '               Stress Period',im           ! MFR and Ditches are active, use all WEL parameters
+    write(536,'(I10,I10,A28,I4)') nwells_out, n_wel_param, '               Stress Period',im           ! MFR and Ditches are active, use all WEL parameters
   else if (month == 6 .or. month == 7) then                                                           ! If June - July
-    write(536,'(I10,I10,A28,I4)') nAgWells, n_wel_param-7, '               Stress Period',im         ! Only Ditches are active, subtract number of MFR segments represented
+    write(536,'(I10,I10,A28,I4)') nwells_out, n_wel_param-7, '               Stress Period',im         ! Only Ditches are active, subtract number of MFR segments represented
   else if (month == 8 .or. month == 9) then                                                           ! If August-September
-    write(536,'(I10,I10,A28,I4)') nAgWells, n_wel_param-9, '               Stress Period',im         ! Only Ditches are active, subtract number of MFR and Ditch segments represented                                              
+    write(536,'(I10,I10,A28,I4)') nwells_out, n_wel_param-7, '               Stress Period',im         ! Only Ditches are active, subtract number of MFR and Ditch segments represented                                              
   end if
     
   do i=1,nAgWells
-  	well_idx = fields(i)%well_idx
-    write(536,'(3I10,ES15.3)')ag_wells(well_idx)%layer, ag_wells(well_idx)%well_row, &
-     ag_wells(well_idx)%well_col, -1*ag_wells(well_idx)%monthly_rate
+  	!well_idx = fields(i)%well_idx  ! Results in duplicated fields -LS
+    !write(536,'(3I10,ES15.3)')ag_wells(well_idx)%layer, ag_wells(well_idx)%well_row, ag_wells(well_idx)%well_col, -1*ag_wells(well_idx)%monthly_rate
+    write(536,'(3I10,ES15.3)')ag_wells(i)%layer, ag_wells(i)%well_row, ag_wells(i)%well_col, -1*ag_wells(i)%monthly_rate
   enddo
+  
+    !LS Write ditch leakage as injection
+  call write_ditch_wells(536, month)
     
-  if (month == 10 .or. month == 11 .or. month == 12 .or. month == 1 .or. &                              ! If October-March MFR is active
-      month == 2 .or. month == 3) then                                                           
+  !if (month == 10 .or. month == 11 .or. month == 12 .or. month == 1 .or. &                              ! If October-March MFR is active
+  !    month == 2 .or. month == 3) then
+  if (month < 6 .or. month > 9) then
     write(536,*)'  MFR5'
     write(536,*)'  MFR6'
     write(536,*)'  MFR7'
@@ -409,19 +416,14 @@ MODULE SWBM_output
     write(536,*)'  MFR9'
     write(536,*)'  MFR10'
     write(536,*)'  MFR11'
-  else if (month == 4 .or. month == 5) then                                                            ! If April-May MFR and Ditches are active
-    write(536,*)'  MFR5'                                            
-    write(536,*)'  MFR6'
-    write(536,*)'  MFR7'
-    write(536,*)'  MFR8'
-    write(536,*)'  MFR9'
-    write(536,*)'  MFR10'
-    write(536,*)'  MFR11'
-    write(536,*)'  FRMRSDitch'
-    write(536,*)'  SVIDDitch'
-  else if (month == 6 .or. month == 7) then                                                           ! If June-July ditches are active
-    write(536,*)'  FRMRSDitch'
-    write(536,*)'  SVIDDitch'
+  !else if (month == 4 .or. month == 5) then                                                            ! If April-May MFR and Ditches are active
+  !  write(536,*)'  MFR5'                                            
+  !  write(536,*)'  MFR6'
+  !  write(536,*)'  MFR7'
+  !  write(536,*)'  MFR8'
+  !  write(536,*)'  MFR9'
+  !  write(536,*)'  MFR10'
+  !  write(536,*)'  MFR11'
   end if
   
   close(536)
@@ -738,39 +740,46 @@ MODULE SWBM_output
    END SUBROUTINE convert_length_to_volume
      
 !  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   SUBROUTINE write_MODFLOW_SFR(im, nmonths, nSegs, model_name)
+  SUBROUTINE write_MODFLOW_SFR(im, month, nSegs, model_name)
+    use ditch_module, only: is_ditch, write_ditch_diversion
  
-   INTEGER, INTENT(IN) :: im, nmonths, nSegs
-   CHARACTER(20), INTENT(IN) :: model_name
-   CHARACTER(24) :: sfr_file
-   INTEGER :: i
+    INTEGER, INTENT(IN) :: im, month, nSegs
+    CHARACTER(20), INTENT(IN) :: model_name
+    CHARACTER(24) :: sfr_file
+    INTEGER :: i, iditch
    
-   sfr_file = trim(model_name) // '.sfr'
+    sfr_file = trim(model_name) // '.sfr'
    
-   if (im==1) then
-     open(unit=213, file=trim(sfr_file), Access = 'append', status='old')
-     write(213,'(I4,A12)')nSegs,'  1  0  0  0'      ! Positive value after nSegs suppresses printing of SFR input data to listing file
-   else
-     write(213,'(I4,A12)')nSegs,'  1  0  0  0'      ! Positive value after nSegs suppresses printing of SFR input data to listing file
-   end if
+    if (im==1) then
+      open(unit=213, file=trim(sfr_file), Access = 'append', status='old')
+      write(213,'(I4,A12)')nSegs,'  1  0  0  0'      ! Positive value after nSegs suppresses printing of SFR input data to listing file
+    else
+      write(213,'(I4,A12)')nSegs,'  1  0  0  0'      ! Positive value after nSegs suppresses printing of SFR input data to listing file
+    end if
    
-   do i = 1, nSegs
-     if(SFR_Routing(i)%FLOW<0) SFR_Routing(i)%FLOW = 0   ! Remove negative flow rates caused by rounding errors
-     !write(*,'(A20,I3,A3,es10.2)') "SFR_Routing%FLOW", i," : ", SFR_Routing(i)%FLOW
+    do i = 1, nSegs
+      ! LS ditch override (for now - TODO better integrate ditch module to modify existing SFR structure)
+      iditch = is_ditch(SFR_Routing(i)%NSEG)
+      if (iditch > 0) then
+        call write_ditch_diversion(213, iditch, month)
+      else
+        if(SFR_Routing(i)%FLOW<0) SFR_Routing(i)%FLOW = 0   ! Remove negative flow rates caused by rounding errors
+        !write(*,'(A20,I3,A3,es10.2)') "SFR_Routing%FLOW", i," : ", SFR_Routing(i)%FLOW
 
-     if(SFR_Routing(i)%IUPSEG == 0) then ! If no upstream segment (i.e. segment is an inflow segment)
-        write(213,'(I3,I5,I5,I5,2es14.6,A8,F5.3)') SFR_Routing(i)%NSEG, SFR_Routing(i)%ICALC, SFR_Routing(i)%OUTSEG,&
-             SFR_Routing(i)%IUPSEG, SFR_Routing(i)%FLOW, SFR_Routing(i)%RUNOFF,'  0  0  ', SFR_Routing(i)%MANNING_N
-      elseif(SFR_Routing(i)%IUPSEG > 0) then ! If upstream segment exists
-        write(213,'(I3,I5,I5,I5,I3,2es14.6,A8,F5.3)')SFR_Routing(i)%NSEG, SFR_Routing(i)%ICALC,& 
-          SFR_Routing(i)%OUTSEG, SFR_Routing(i)%IUPSEG, SFR_Routing(i)%IPRIOR, SFR_Routing(i)%FLOW, &
-          SFR_Routing(i)%RUNOFF,'  0  0  ', SFR_Routing(i)%MANNING_N
-      endif
-      write(213,'(F7.2)')SFR_Routing(i)%WIDTH1
-      write(213,'(F7.2)')SFR_Routing(i)%WIDTH2
-   enddo
+        if(SFR_Routing(i)%IUPSEG == 0) then ! If no upstream segment (i.e. segment is an inflow segment)
+          write(213,'(I3,I5,I5,I5,2es14.6,A8,F5.3)') SFR_Routing(i)%NSEG, SFR_Routing(i)%ICALC, SFR_Routing(i)%OUTSEG,&
+                SFR_Routing(i)%IUPSEG, SFR_Routing(i)%FLOW, SFR_Routing(i)%RUNOFF,'  0  0  ', SFR_Routing(i)%MANNING_N
+        elseif(SFR_Routing(i)%IUPSEG > 0) then ! If upstream segment exists
+          write(213,'(I3,I5,I5,I5,I3,2es14.6,A8,F5.3)')SFR_Routing(i)%NSEG, SFR_Routing(i)%ICALC,& 
+            SFR_Routing(i)%OUTSEG, SFR_Routing(i)%IUPSEG, SFR_Routing(i)%IPRIOR, SFR_Routing(i)%FLOW, &
+            SFR_Routing(i)%RUNOFF,'  0  0  ', SFR_Routing(i)%MANNING_N
+        endif
+        write(213,'(F7.2)')SFR_Routing(i)%WIDTH1
+        write(213,'(F7.2)')SFR_Routing(i)%WIDTH2
+      end if    
+    enddo
      
-   END SUBROUTINE  write_MODFLOW_SFR
+  END SUBROUTINE  write_MODFLOW_SFR
  ! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 !  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    SUBROUTINE write_UCODE_SFR_template(im, nmonths, nSegs, model_name)

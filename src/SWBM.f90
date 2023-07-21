@@ -22,6 +22,7 @@ PROGRAM SWBM
   USE define_fields
   USE irrigation
   USE SWBM_output
+  USE ditch_module
   
   IMPLICIT NONE
 
@@ -36,7 +37,7 @@ PROGRAM SWBM
   CHARACTER(10) :: SFR_Template, suffix, date_text ! , scenario
   !CHARACTER(10) :: recharge_scenario, flow_lim_scenario, nat_veg_scenario
   CHARACTER(20) :: model_name, text_dummy
-  CHARACTER(30) :: filename!, wel_file
+  CHARACTER(30) :: filename, ditch_file!, wel_file
   CHARACTER(400) :: cmd
   CHARACTER(50), ALLOCATABLE, DIMENSION(:) :: daily_out_name
   INTEGER, DIMENSION(31) :: ET_Active
@@ -52,6 +53,9 @@ PROGRAM SWBM
   enddo
   close(10)
   
+  ! LS Initialize Irrigation Ditch Module
+  call initialize_irr_ditch()
+  
   open(unit=800, file='SWBM.log')                         ! Open record file for screen output
   eff_precip = 0.
   Total_Ref_ET = 0.
@@ -60,6 +64,8 @@ PROGRAM SWBM
   read(10, *) inflow_is_vol, nSFR_inflow_segs, nmonths, nrows, ncols
   read(10, *) RD_Mult, SFR_Template
   read(10, *) using_neighbor_irr_rule ! Neighbor-irrigating rule: Do farmers look to neighbor behavior for irrigation onset [TRUE] or only own field's soil moisture [FALSE]
+  !LS Get Irrigation ditch input file
+  read(10, *) ditch_file
   close (10)
   print*, SFR_Template
   if (trim(SFR_Template)/='UCODE' .and. trim(SFR_Template)/='PEST') then 
@@ -113,6 +119,11 @@ PROGRAM SWBM
   read(85,*)  ! read header into nothing
   CALL initialize_streams(nSubws, nSFR_inflow_segs)
   CALL read_landcover_table(nlandcover)
+  
+  !LS Read in irrigation ditch
+  if (trim(ditch_file) /= 'NONE') then
+    call read_irr_ditch_input_file(ditch_file, 10)
+  end if
 
   CALL readpoly(npoly, nrows, ncols, rch_zones)    ! Read in field info
   CALL initialize_wells(npoly, nAgWells, nMuniWells)                       ! Read in Ag well info
@@ -254,7 +265,7 @@ PROGRAM SWBM
     CALL write_MODFLOW_RCH(im,numdays,nrows,ncols,rch_zones)
     CALL write_MODFLOW_ETS(im,numdays,nrows,ncols,rch_zones,Total_Ref_ET,ET_Zone_Cells, ET_Cells_ex_depth, npoly)
     CALL print_monthly_output(im, nlandcover, nSubws)
-    CALL write_MODFLOW_SFR(im, nmonths, nSegs, model_name)
+    CALL write_MODFLOW_SFR(im, month, nSegs, model_name)
     CALL write_UCODE_SFR_template(im, nmonths, nSegs, model_name)   ! Write JTF file for UCODE 
     CALL write_MODFLOW_WEL(im, month, nAgWells, n_wel_param, model_name)       
     ! CALL write_MODFLOW_MNW2(im, nAgWells, nMuniWells, ag_wells_specified)          
