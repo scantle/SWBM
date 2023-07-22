@@ -12,6 +12,7 @@ MODULE SWBM_output
   REAL, ALLOCATABLE, DIMENSION(:) :: landcover_total_irr, landcover_sw_irr, landcover_gw_irr, landcover_area
   REAL, ALLOCATABLE, DIMENSION(:) :: landcover_effprecip, landcover_pET, landcover_deficiency
   REAL, ALLOCATABLE, DIMENSION(:) :: landcover_recharge, landcover_aET, landcover_delta_s
+  integer,parameter               :: tab_iunit_start=667
   TYPE(budget_terms), ALLOCATABLE, DIMENSION(:) :: stream_WB
    
   CONTAINS
@@ -740,10 +741,11 @@ MODULE SWBM_output
    END SUBROUTINE convert_length_to_volume
      
 !  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  SUBROUTINE write_MODFLOW_SFR(im, month, nSegs, model_name)
+
+  SUBROUTINE write_MODFLOW_SFR(im, month, nSegs, model_name, total_days)
     use ditch_module, only: is_ditch, write_ditch_diversion
  
-    INTEGER, INTENT(IN) :: im, month, nSegs
+    INTEGER, INTENT(IN) :: im, month, nSegs, total_days
     CHARACTER(20), INTENT(IN) :: model_name
     CHARACTER(24) :: sfr_file
     INTEGER :: i, iditch
@@ -752,10 +754,10 @@ MODULE SWBM_output
    
     if (im==1) then
       open(unit=213, file=trim(sfr_file), Access = 'append', status='old')
-      write(213,'(I4,A12)')nSegs,'  1  0  0  0'      ! Positive value after nSegs suppresses printing of SFR input data to listing file
-    else
-      write(213,'(I4,A12)')nSegs,'  1  0  0  0'      ! Positive value after nSegs suppresses printing of SFR input data to listing file
     end if
+
+    ! Item 3
+    write(213,'(I4,A12)')nSegs,'  1  0  0  0'      ! Positive value after nSegs suppresses printing of SFR input data to listing file
    
     do i = 1, nSegs
       ! LS ditch override (for now - TODO better integrate ditch module to modify existing SFR structure)
@@ -763,6 +765,7 @@ MODULE SWBM_output
       if (iditch > 0) then
         call write_ditch_diversion(213, iditch, month)
       else
+        ! Item 4b, code assumes icalc = 1
         if(SFR_Routing(i)%FLOW<0) SFR_Routing(i)%FLOW = 0   ! Remove negative flow rates caused by rounding errors
         !write(*,'(A20,I3,A3,es10.2)') "SFR_Routing%FLOW", i," : ", SFR_Routing(i)%FLOW
 
@@ -774,14 +777,58 @@ MODULE SWBM_output
             SFR_Routing(i)%OUTSEG, SFR_Routing(i)%IUPSEG, SFR_Routing(i)%IPRIOR, SFR_Routing(i)%FLOW, &
             SFR_Routing(i)%RUNOFF,'  0  0  ', SFR_Routing(i)%MANNING_N
         endif
+        ! Item 4c
         write(213,'(F7.2)')SFR_Routing(i)%WIDTH1
         write(213,'(F7.2)')SFR_Routing(i)%WIDTH2
-      end if    
+      end if
+      
+      ! First stress period: Item 4g, the tabfiles
+      if (im==1) then
+        write(213, '(I3,I8,I4)') SFR_Routing(i)%NSEG, total_days, SFR_Routing(:)%tabunit
+      end if
+      
     enddo
      
   END SUBROUTINE  write_MODFLOW_SFR
- ! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 
 !  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  subroutine write_MODFLOW_SFR_tabfiles(im, numdays, simday, nSegs)
+    implicit none
+  
+    integer, intent(in)         :: im, numdays, simday, nSegs
+    integer                     :: i, ntab, iday
+    character(30)               :: fname
+    
+    !TODO precalc
+    ntab = count(SFR_Routing(:)%tabunit > 0)
+    
+    ! Early exit if none of the streams are using tabfiles. 
+    if(ntab < 1) return
+    
+    if (im==1) then
+      ! Start tabfiles
+      do i=1, nSegs
+        if (SFR_Routing(i)%tabunit > 0) then  ! Has unit number == do tab
+          write(fname, '(a,I3.3,a)') 'SVIHM_tabfile_seg', SFR_Routing(i)%NSEG, '.tab'
+          open(tab_iunit_start+i-1, file=fname, status='replace')
+        end if
+      end do
+    end if
+    
+    do i=1, nSegs
+      if (SFR_Routing(i)%tabunit > 0) then ! Has unit number == do tab
+      ! Until we have daily flows, just repeat the monthly flow for numdays
+        do iday=1, numdays
+          write(tab_iunit_start+i-1, '(i8, es14.6)') simday-numdays+iday, SFR_Routing(i)%FLOW   ! Last day of month - days in month + day being written
+        end do
+      end if
+    end do
+      
+  end subroutine write_MODFLOW_SFR_tabfiles
+  
+!  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
    SUBROUTINE write_UCODE_SFR_template(im, nmonths, nSegs, model_name)
  
    INTEGER, INTENT(IN) :: im, nmonths, nSegs
@@ -813,6 +860,7 @@ MODULE SWBM_output
    enddo
      
    END SUBROUTINE  write_UCODE_SFR_template
-     
+
+!  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 END MODULE
-     

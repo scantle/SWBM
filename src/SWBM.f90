@@ -26,7 +26,7 @@ PROGRAM SWBM
   
   IMPLICIT NONE
 
-  INTEGER :: nmonths, numdays, WY, month, jday, i, im, nrows, ncols, ncmds, dummy, WYstart
+  INTEGER :: nmonths, numdays, WY, month, jday, i, im, nrows, ncols, ncmds, dummy, WYstart, simday, total_days
   INTEGER :: n_wel_param, num_daily_out, unit_num, nSFR_inflow_segs!, num_MAR_fields
   INTEGER, ALLOCATABLE, DIMENSION(:,:) :: rch_zones, ET_Zone_Cells
   INTEGER, ALLOCATABLE, DIMENSION(:)   :: ip_daily_out, ndays, SFR_inflow_segs!, MAR_fields
@@ -177,6 +177,8 @@ PROGRAM SWBM
   read(220,*)                  ! Read header into nothing
   fields%irr_flag = 0          ! Initialize irrigating status flag array
   month = 10                   ! Initialize month variable to start in October
+  simday = 0                   ! Counter of day of simulation
+  total_days = sum(ndays(:))   ! Total days in simulation
   
   ! open(unit=801, file= trim(model_name)//'.mnw2', Access = 'append', status='old')       
   WY = WYstart   ! water year
@@ -204,6 +206,7 @@ PROGRAM SWBM
     
     read(220,*) drain_flow(im)                       ! Read drain flow into array         
     do jday=1, numdays                              ! Loop over days in each month
+      simday = simday + 1
       if (jday==1) monthly%ET_active = 0            ! Set ET counter to 0 at the beginning of the month. Used for turning ET on and off in MODFLOW so it is not double counted.    
       daily%ET_active  = 0                          ! Reset ET active counter
       daily%tot_irr = 0.                            ! Reset daily tot_irr value to zero
@@ -265,7 +268,8 @@ PROGRAM SWBM
     CALL write_MODFLOW_RCH(im,numdays,nrows,ncols,rch_zones)
     CALL write_MODFLOW_ETS(im,numdays,nrows,ncols,rch_zones,Total_Ref_ET,ET_Zone_Cells, ET_Cells_ex_depth, npoly)
     CALL print_monthly_output(im, nlandcover, nSubws)
-    CALL write_MODFLOW_SFR(im, month, nSegs, model_name)
+    CALL write_MODFLOW_SFR(im, month, nSegs, model_name, total_days)
+    CALL write_MODFLOW_SFR_tabfiles(im, numdays, simday, nSegs)
     CALL write_UCODE_SFR_template(im, nmonths, nSegs, model_name)   ! Write JTF file for UCODE 
     CALL write_MODFLOW_WEL(im, month, nAgWells, n_wel_param, model_name)       
     ! CALL write_MODFLOW_MNW2(im, nAgWells, nMuniWells, ag_wells_specified)          

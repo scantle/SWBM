@@ -42,7 +42,7 @@ TYPE subws_flow_partitioning
 END TYPE
 
 TYPE Stream_Segments
-    INTEGER :: NSEG, ICALC, OUTSEG, IUPSEG, IPRIOR
+    INTEGER :: NSEG, ICALC, OUTSEG, IUPSEG, IPRIOR, tabunit
     REAL*8 :: FLOW, WIDTH1, WIDTH2, MANNING_N, RUNOFF 
     CHARACTER(12) :: Bed_K_Param, Manning_n_Param
 END TYPE

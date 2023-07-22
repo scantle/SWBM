@@ -38,7 +38,7 @@ MODULE irrigation
     DO i=1, nSegs
       read(10,*)SFR_Routing(i)%NSEG, SFR_Routing(i)%ICALC, SFR_Routing(i)%OUTSEG, SFR_Routing(i)%IUPSEG, &
                 SFR_Routing(i)%IPRIOR, SFR_Routing(i)%WIDTH1, SFR_Routing(i)%WIDTH2, SFR_Routing(i)%MANNING_N, &
-                SFR_Routing(i)%Bed_K_Param, SFR_Routing(i)%Manning_n_Param
+                SFR_Routing(i)%Bed_K_Param, SFR_Routing(i)%Manning_n_Param, SFR_Routing(i)%tabunit
       SFR_Routing(i)%Bed_K_Param = trim(SFR_Routing(i)%Bed_K_Param)
       SFR_Routing(i)%Manning_n_Param = trim(SFR_Routing(i)%Manning_n_Param)
     ENDDO
@@ -111,8 +111,8 @@ MODULE irrigation
       temp_subws_ID = SFR_allocation(i)%subws_ID
       temp_seg = SFR_allocation(i)%SFR_segment       
       temp_flow = (surfaceWater(temp_subws_ID)%avail_sw_vol + &
-      surfaceWater(temp_subws_ID)%inflow_nonirr)  &
-      / numdays * SFR_allocation(i)%frac_subws_flow
+        surfaceWater(temp_subws_ID)%inflow_nonirr)  &
+        / numdays * SFR_allocation(i)%frac_subws_flow
       !write(*,'(A20,I3, A20, es10.2)') "SFR inflow seg: " , SFR_allocation(i)%SFR_segment, "SFR flow: ", temp_flow
       SFR_Routing(temp_seg)%FLOW = temp_flow
       
