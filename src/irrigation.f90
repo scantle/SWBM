@@ -23,12 +23,24 @@ MODULE irrigation
   
     INTEGER, INTENT(IN) :: nSubws, nSFR_inflow_segs
     INTEGER :: dummy, i 
+    character(60)  :: line
+    logical        :: past_header=.false.
     
     open(unit=10, file='SFR_network.txt', status='old')
     !DO i=1,6   ! read first 6 comments lines of SFR file into nothing
     !  read(10,*) 
     !ENDDO
-    read(10,*) dummy, nSegs 
+    ! Find header end - to the best of my knowledge, all possible options
+    do while (past_header /= .true.)
+      read(10, '(a60)') line
+      line = adjustl(line)
+      if (line(1:1)=='#' .or. index(line, 'REACHINPUT')>0 .or. index(line, 'TRANSROUTE')>0 .or. index(line, 'TABFILES')>0) then
+        continue
+      else
+        past_header = .true.
+      end if
+    end do
+    read(line,*) dummy, nSegs 
     close(10)
     ALLOCATE(SFR_Routing(nSegs)) ! Allocate arrays of length equal to number of SFR segments       
     ALLOCATE(SFR_allocation(nSFR_inflow_segs))                       ! Allocate array of length equal to number of segments where inflow is specified

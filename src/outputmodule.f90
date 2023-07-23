@@ -781,13 +781,16 @@ MODULE SWBM_output
         write(213,'(F7.2)')SFR_Routing(i)%WIDTH1
         write(213,'(F7.2)')SFR_Routing(i)%WIDTH2
       end if
-      
-      ! First stress period: Item 4g, the tabfiles
-      if (im==1) then
-        write(213, '(I3,I8,I4)') SFR_Routing(i)%NSEG, total_days, SFR_Routing(:)%tabunit
-      end if
-      
     enddo
+    
+    if (im==1) then
+      ! First stress period: Item 4g (according to NWT IO documentation, at least), the tabfiles
+      do i=1, nSegs
+        if (SFR_Routing(i)%tabunit > 0) then  ! Has unit number == do tab
+          write(213, '(I3,I8,I4)') SFR_Routing(i)%NSEG, total_days, SFR_Routing(i)%tabunit
+        end if
+      end do
+    end if
      
   END SUBROUTINE  write_MODFLOW_SFR
  
@@ -820,7 +823,8 @@ MODULE SWBM_output
       if (SFR_Routing(i)%tabunit > 0) then ! Has unit number == do tab
       ! Until we have daily flows, just repeat the monthly flow for numdays
         do iday=1, numdays
-          write(tab_iunit_start+i-1, '(i8, es14.6)') simday-numdays+iday, SFR_Routing(i)%FLOW   ! Last day of month - days in month + day being written
+          write(tab_iunit_start+i-1, '(i8, es14.6)') simday-numdays+iday-1, SFR_Routing(i)%FLOW   ! Last day of month - days in month + day-1 being written
+                                                                  ! The -1 was discovered by comparing MF results with & without the tabfile... poorly documented!
         end do
       end if
     end do
