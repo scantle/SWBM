@@ -121,8 +121,8 @@ MODULE irrigation
     
     INTEGER, INTENT(IN) :: npoly, numdays, nSubws, nSegs, nSFR_inflow_segs
     LOGICAL, INTENT(IN) :: daily_sw
-    INTEGER :: i, j, wsid, month, looplen=1
-    REAL*8 :: temp_flow, avg_frac
+    INTEGER :: i, j, wsid, seg, month, looplen=1
+    REAL*8 :: temp_flow, avg_frac, flowsum
     
     ! set looplen to days in month if doing daily flows
     if (daily_sw) looplen = numdays
@@ -133,34 +133,37 @@ MODULE irrigation
     end do
     
     DO i=1,nSFR_inflow_segs
-      wsid = SFR_allocation(i)%subws_ID 
+      wsid = SFR_allocation(i)%subws_ID
+      seg = SFR_allocation(i)%SFR_segment
       temp_flow = surfaceWater(wsid)%avail_sw_vol + sum(surfaceWater(wsid)%inflow_nonirr(1:looplen))
       avg_frac = sum(SFR_allocation(i)%frac_subws_flow(1:looplen))/looplen
       
-      !write(*,'(A20,I3, A20, es10.2)') "SFR inflow seg: " , SFR_allocation(i)%SFR_segment, "SFR flow: ", temp_flow
-      SFR_Routing(SFR_allocation(i)%SFR_segment)%FLOW = (temp_flow*avg_frac)/numdays
+      !write(*,'(A20,I3, A20, es10.2)') "SFR inflow seg: " , seg, "SFR flow: ", temp_flow
+      SFR_Routing(seg)%FLOW = (temp_flow*avg_frac)/numdays
       
       if (daily_sw .and. surfaceWater(wsid)%avail_sw_vol > 0.0) then
-      ! For daily flow, we subtract out a monthly average pumping rate from each day.
-      ! Subwatershed/Segments with zero flow left at the end of the month (avail_sw_vol = 0) get skipped -
-      ! this leaves them with zero flow every day. This is to prevent negative flow values and is equivalent
-      ! to just subtracting out flow when it's available insteam. We know it's all allocated already!
-      ! (although this setup still could produce negative numbers) -LS
+        flowsum = sum(surfaceWater(wsid)%inflow_irr(:))
+        ! For daily flow, we subtract out a flow-proporational fraction of the monthly average irrigation rate.
+        ! Subwatershed/Segments with zero flow left at the end of the month (avail_sw_vol = 0) get skipped -
+        ! this leaves them with zero flow every day. This is equivalent to just subtracting out flow when it's 
+        ! available. We know it's all allocated already!
         do j=1, numdays
-          SFR_Routing(SFR_allocation(i)%SFR_segment)%FLOW_DAILY(j) = (surfaceWater(wsid)%inflow_irr(j) - &
-                   (surfaceWater(wsid)%sw_irr / numdays) + &
+          avg_frac = (surfaceWater(wsid)%inflow_irr(j) / flowsum)
+          SFR_Routing(seg)%FLOW_DAILY(j) = (surfaceWater(wsid)%inflow_irr(j) - &
+                   (surfaceWater(wsid)%sw_irr * avg_frac) + &
                    surfaceWater(wsid)%inflow_nonirr(j)) * SFR_allocation(i)%frac_subws_flow(j)
         end do
         ! LS Temp
-        if (minval(SFR_Routing(SFR_allocation(i)%SFR_segment)%FLOW_DAILY(:))<0.0) then
-          write(*,'(2(a,i3))') 'Negative flow value on day', minloc(SFR_Routing(SFR_allocation(i)%SFR_segment)%FLOW_DAILY(:)), '| segment', i
-        end if
+        !if (minval(SFR_Routing(seg)%FLOW_DAILY(:))<0.0) then
+        !  write(*,'(2(a,i3),a,es14.6)') 'Negative flow value on day', minloc(SFR_Routing(seg)%FLOW_DAILY(:)), &
+        !                       ' | segment', i, '| Value:', minval(SFR_Routing(seg)%FLOW_DAILY(:))
+        !end if
       end if
       ! Debug
       !if (i==1) write(*,'(3a5,4a14)') 'i','wsid','seg','SWRemainder','AvgDailyPump','Flow','AvgDailyFlow'
-      !write(*,'(3i5,4es14.6)') i, wsid, SFR_allocation(i)%SFR_segment, surfaceWater(wsid)%avail_sw_vol, &
-      !       (surfaceWater(wsid)%sw_irr / numdays), SFR_Routing(SFR_allocation(i)%SFR_segment)%FLOW, &
-      !       sum(SFR_Routing(SFR_allocation(i)%SFR_segment)%FLOW_DAILY(:))/numdays
+      !write(*,'(3i5,4es14.6)') i, wsid, seg, surfaceWater(wsid)%avail_sw_vol, &
+      !       (surfaceWater(wsid)%sw_irr / numdays), SFR_Routing(seg)%FLOW, &
+      !       sum(SFR_Routing(seg)%FLOW_DAILY(:))/numdays
     ENDDO
 
     !if (month .ge. 4 .and. month .le. 7) then ! If April-July, when the ditches are running
