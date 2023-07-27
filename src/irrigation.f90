@@ -78,25 +78,32 @@ MODULE irrigation
   END SUBROUTINE initialize_streams
 
 ! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  subroutine read_monthly_stream_inflow(inflow_is_vol, numdays)
+  subroutine read_monthly_stream_inflow(inflow_is_vol, numdays, daily_sw)
     
     INTEGER, INTENT(IN) :: numdays
-    LOGICAL, INTENT(IN) :: inflow_is_vol
-    INTEGER :: i
+    LOGICAL, INTENT(IN) :: inflow_is_vol, daily_sw
+    INTEGER :: i, looplen=1
     CHARACTER(10) :: date_dummy
     
-    surfaceWater(:)%inflow_irr = 0.                                                              ! Reset all segment inflows to zero
-    surfaceWater(:)%sw_irr = 0.                                                                  ! Reset surface-water irrigation to zero        
-    read(215,*) date_dummy, (surfaceWater(i)%inflow_irr, i=1, nSubws)                            ! Read in date and irrigation inflow for each stream simulated
-    read(216,*) date_dummy, (surfaceWater(i)%inflow_nonirr, i=1, nSubws)                         ! Read in date and irrigation inflow for each stream simulated
+    ! set looplen to days in month if doing daily flows
+    if (daily_sw) looplen = numdays
+    
+    ! Reset to zero variables
+    surfaceWater(:)%sw_irr = 0.0
+    
+    do i=1, looplen
+      read(215,*) date_dummy, surfaceWater(:)%inflow_irr(i)                            ! Read in date and irrigation inflow for each stream simulated
+      read(216,*) date_dummy, surfaceWater(:)%inflow_nonirr(i)                         ! Read in date and irrigation inflow for each stream simulated
+    end do
 
-
-    if (inflow_is_vol) then
-    	surfaceWater%avail_sw_vol = surfaceWater%inflow_irr       ! Define available SW vol
-    else 
-      surfaceWater%inflow_irr = surfaceWater%inflow_irr * numdays                                ! If inflow is an average monthly rate, convert to volume
-      surfaceWater%inflow_nonirr = surfaceWater%inflow_nonirr * numdays
-      surfaceWater%avail_sw_vol = surfaceWater%inflow_irr 
+    if (inflow_is_vol .or. daily_sw) then
+      do i=1, nSubws
+    	  surfaceWater(i)%avail_sw_vol = sum(surfaceWater(i)%inflow_irr(1:looplen))       ! Define available SW vol
+      end do
+    else
+      surfaceWater%inflow_irr(1) = surfaceWater%inflow_irr(1) * numdays                                ! If inflow is an average monthly rate, convert to volume
+      surfaceWater%inflow_nonirr(1) = surfaceWater%inflow_nonirr(1) * numdays
+      surfaceWater%avail_sw_vol = surfaceWater%inflow_irr(1) 
     end if
 
     !write(*,'(A60)') "surfaceWater attributes: Irr, nonIrr, SWIrr, availSW:"
@@ -110,24 +117,50 @@ MODULE irrigation
   
 ! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   
-  subroutine SFR_streamflow(npoly,numdays, nSubws, nSegs, nSFR_inflow_segs, month)
+  subroutine SFR_streamflow(npoly, numdays, nSubws, nSegs, nSFR_inflow_segs, month, daily_sw)
     
     INTEGER, INTENT(IN) :: npoly, numdays, nSubws, nSegs, nSFR_inflow_segs
-    INTEGER :: i, temp_seg, temp_subws_ID, month
-    REAL :: temp_flow
+    LOGICAL, INTENT(IN) :: daily_sw
+    INTEGER :: i, j, wsid, month, looplen=1
+    REAL*8 :: temp_flow, avg_frac
     
-    !write(*,*) SFR_Routing%FLOW
-
-    SFR_Routing%FLOW = 0.                                          ! Reset all SFR flow to zero   
+    ! set looplen to days in month if doing daily flows
+    if (daily_sw) looplen = numdays
+    
+    SFR_Routing%FLOW = 0.0                                         ! Reset all SFR flow to zero
+    do i=1, nSegs
+      SFR_Routing(i)%FLOW_DAILY(:) = 0.0
+    end do
+    
     DO i=1,nSFR_inflow_segs
-      temp_subws_ID = SFR_allocation(i)%subws_ID
-      temp_seg = SFR_allocation(i)%SFR_segment       
-      temp_flow = (surfaceWater(temp_subws_ID)%avail_sw_vol + &
-        surfaceWater(temp_subws_ID)%inflow_nonirr)  &
-        / numdays * SFR_allocation(i)%frac_subws_flow
-      !write(*,'(A20,I3, A20, es10.2)') "SFR inflow seg: " , SFR_allocation(i)%SFR_segment, "SFR flow: ", temp_flow
-      SFR_Routing(temp_seg)%FLOW = temp_flow
+      wsid = SFR_allocation(i)%subws_ID 
+      temp_flow = surfaceWater(wsid)%avail_sw_vol + sum(surfaceWater(wsid)%inflow_nonirr(1:looplen))
+      avg_frac = sum(SFR_allocation(i)%frac_subws_flow(1:looplen))/looplen
       
+      !write(*,'(A20,I3, A20, es10.2)') "SFR inflow seg: " , SFR_allocation(i)%SFR_segment, "SFR flow: ", temp_flow
+      SFR_Routing(SFR_allocation(i)%SFR_segment)%FLOW = (temp_flow*avg_frac)/numdays
+      
+      if (daily_sw .and. surfaceWater(wsid)%avail_sw_vol > 0.0) then
+      ! For daily flow, we subtract out a monthly average pumping rate from each day.
+      ! Subwatershed/Segments with zero flow left at the end of the month (avail_sw_vol = 0) get skipped -
+      ! this leaves them with zero flow every day. This is to prevent negative flow values and is equivalent
+      ! to just subtracting out flow when it's available insteam. We know it's all allocated already!
+      ! (although this setup still could produce negative numbers) -LS
+        do j=1, numdays
+          SFR_Routing(SFR_allocation(i)%SFR_segment)%FLOW_DAILY(j) = (surfaceWater(wsid)%inflow_irr(j) - &
+                   (surfaceWater(wsid)%sw_irr / numdays) + &
+                   surfaceWater(wsid)%inflow_nonirr(j)) * SFR_allocation(i)%frac_subws_flow(j)
+        end do
+        ! LS Temp
+        if (minval(SFR_Routing(SFR_allocation(i)%SFR_segment)%FLOW_DAILY(:))<0.0) then
+          write(*,'(2(a,i3))') 'Negative flow value on day', minloc(SFR_Routing(SFR_allocation(i)%SFR_segment)%FLOW_DAILY(:)), '| segment', i
+        end if
+      end if
+      ! Debug
+      !if (i==1) write(*,'(3a5,4a14)') 'i','wsid','seg','SWRemainder','AvgDailyPump','Flow','AvgDailyFlow'
+      !write(*,'(3i5,4es14.6)') i, wsid, SFR_allocation(i)%SFR_segment, surfaceWater(wsid)%avail_sw_vol, &
+      !       (surfaceWater(wsid)%sw_irr / numdays), SFR_Routing(SFR_allocation(i)%SFR_segment)%FLOW, &
+      !       sum(SFR_Routing(SFR_allocation(i)%SFR_segment)%FLOW_DAILY(:))/numdays
     ENDDO
 
     !if (month .ge. 4 .and. month .le. 7) then ! If April-July, when the ditches are running
@@ -138,8 +171,7 @@ MODULE irrigation
       
     SFR_Routing%RUNOFF = 0.                                        ! Reset runoff to zero 
     DO i=1,npoly                                                   ! Sum runoff volumes for each SFR segment
-      SFR_Routing(fields(i)%runoff_ISEG)%RUNOFF = SFR_Routing(fields(i)%runoff_ISEG)%RUNOFF + &
-      monthly(i)%runoff*fields(i)%area 	
+      SFR_Routing(fields(i)%runoff_ISEG)%RUNOFF = SFR_Routing(fields(i)%runoff_ISEG)%RUNOFF + monthly(i)%runoff*fields(i)%area 	
     ENDDO 
     SFR_Routing%RUNOFF = SFR_Routing%RUNOFF / numdays              ! Calculate average daily runoff for model input
         

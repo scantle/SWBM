@@ -172,7 +172,7 @@ MODULE SWBM_output
    monthly%effprecip = monthly%effprecip + daily%effprecip                            ! Add daily linear effective precip to monthly total    
    monthly%change_in_storage = monthly%change_in_storage + daily%change_in_storage    ! Add daily linear change in storage to monthly total    
    monthly%MAR_vol = monthly%MAR_vol + daily%MAR_vol                                  ! Add daily linear MAR volume to monthly total
-   monthly%runoff = monthly%runoff + daily%runoff                                    
+   monthly%runoff = monthly%runoff + daily%runoff                                     ! linear runoff monthly total
 
    !    write(*,*) sum(monthly%gw_irr_vol)
    !write(*,*) monthly%gw_irr_vol
