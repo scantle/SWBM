@@ -742,11 +742,12 @@ MODULE SWBM_output
      
 !  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-  SUBROUTINE write_MODFLOW_SFR(im, month, nSegs, model_name, total_days)
+  SUBROUTINE write_MODFLOW_SFR(im, month, nSegs, model_name, total_days, daily_sw)
     use ditch_module, only: is_ditch, write_ditch_diversion
  
     INTEGER, INTENT(IN) :: im, month, nSegs, total_days
     CHARACTER(20), INTENT(IN) :: model_name
+    logical,intent(in)        :: daily_sw
     CHARACTER(24) :: sfr_file
     INTEGER :: i, iditch
    
@@ -786,7 +787,7 @@ MODULE SWBM_output
     if (im==1) then
       ! First stress period: Item 4g (according to NWT IO documentation, at least), the tabfiles
       do i=1, nSegs
-        if (SFR_Routing(i)%tabunit > 0) then  ! Has unit number == do tab
+        if (SFR_Routing(i)%tabunit > 0 .and. daily_sw) then  ! Has unit number == do tab
           write(213, '(I3,I8,I4)') SFR_Routing(i)%NSEG, total_days, SFR_Routing(i)%tabunit
         end if
       end do
@@ -796,18 +797,19 @@ MODULE SWBM_output
  
 !  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-  subroutine write_MODFLOW_SFR_tabfiles(im, numdays, simday, nSegs)
+  subroutine write_MODFLOW_SFR_tabfiles(im, numdays, simday, nSegs, daily_sw)
     implicit none
   
     integer, intent(in)         :: im, numdays, simday, nSegs
+    logical, intent(in)         :: daily_sw
     integer                     :: i, ntab, iday
     character(30)               :: fname
     
     !TODO precalc
     ntab = count(SFR_Routing(:)%tabunit > 0)
     
-    ! Early exit if none of the streams are using tabfiles. 
-    if(ntab < 1) return
+    ! Early exit if daily is off or none of the streams are using tabfiles.
+    if(daily_sw==.false. .or. ntab < 1) return
     
     if (im==1) then
       ! Start tabfiles
@@ -821,9 +823,8 @@ MODULE SWBM_output
     
     do i=1, nSegs
       if (SFR_Routing(i)%tabunit > 0) then ! Has unit number == do tab
-      ! Until we have daily flows, just repeat the monthly flow for numdays
         do iday=1, numdays
-          write(tab_iunit_start+i-1, '(i8, es14.6)') simday-numdays+iday-1, SFR_Routing(i)%FLOW   ! Last day of month - days in month + day-1 being written
+          write(tab_iunit_start+i-1, '(i8, es14.6)') simday-numdays+iday-1, SFR_Routing(i)%FLOW_DAILY(iday)   ! Last day of month - days in month + day-1 being written
                                                                   ! The -1 was discovered by comparing MF results with & without the tabfile... poorly documented!
         end do
       end if

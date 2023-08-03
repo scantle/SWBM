@@ -271,8 +271,8 @@ PROGRAM SWBM
     CALL write_MODFLOW_RCH(im,numdays,nrows,ncols,rch_zones)
     CALL write_MODFLOW_ETS(im,numdays,nrows,ncols,rch_zones,Total_Ref_ET,ET_Zone_Cells, ET_Cells_ex_depth, npoly)
     CALL print_monthly_output(im, nlandcover, nSubws)
-    CALL write_MODFLOW_SFR(im, month, nSegs, model_name, total_days)
-    CALL write_MODFLOW_SFR_tabfiles(im, numdays, simday, nSegs)
+    CALL write_MODFLOW_SFR(im, month, nSegs, model_name, total_days, daily_sw)
+    CALL write_MODFLOW_SFR_tabfiles(im, numdays, simday, nSegs, daily_sw)
     CALL write_UCODE_SFR_template(im, nmonths, nSegs, model_name)   ! Write JTF file for UCODE 
     CALL write_MODFLOW_WEL(im, month, nAgWells, n_wel_param, model_name)       
     ! CALL write_MODFLOW_MNW2(im, nAgWells, nMuniWells, ag_wells_specified)          
