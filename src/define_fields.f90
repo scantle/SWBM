@@ -32,18 +32,18 @@ TYPE crop_table
 END TYPE
 
 TYPE surface_water
-    REAL*8 :: inflow_irr, inflow_nonirr, sw_irr, avail_sw_vol
+    REAL*8 :: inflow_irr(31), inflow_nonirr(31), sw_irr, avail_sw_vol
 END TYPE
 
 TYPE subws_flow_partitioning
     INTEGER :: subws_ID, SFR_segment
-    REAL :: frac_subws_flow
+    REAL :: frac_subws_flow(31)
     CHARACTER(50) :: subwsName, streamName
 END TYPE
 
 TYPE Stream_Segments
-    INTEGER :: NSEG, ICALC, OUTSEG, IUPSEG, IPRIOR
-    REAL*8 :: FLOW, WIDTH1, WIDTH2, MANNING_N, RUNOFF 
+    INTEGER :: NSEG, ICALC, OUTSEG, IUPSEG, IPRIOR, tabunit
+    REAL*8 :: FLOW, WIDTH1, WIDTH2, MANNING_N, RUNOFF, FLOW_DAILY(31)
     CHARACTER(12) :: Bed_K_Param, Manning_n_Param
 END TYPE
     

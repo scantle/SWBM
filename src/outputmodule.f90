@@ -12,6 +12,7 @@ MODULE SWBM_output
   REAL, ALLOCATABLE, DIMENSION(:) :: landcover_total_irr, landcover_sw_irr, landcover_gw_irr, landcover_area
   REAL, ALLOCATABLE, DIMENSION(:) :: landcover_effprecip, landcover_pET, landcover_deficiency
   REAL, ALLOCATABLE, DIMENSION(:) :: landcover_recharge, landcover_aET, landcover_delta_s
+  integer,parameter               :: tab_iunit_start=667
   TYPE(budget_terms), ALLOCATABLE, DIMENSION(:) :: stream_WB
    
   CONTAINS
@@ -171,7 +172,7 @@ MODULE SWBM_output
    monthly%effprecip = monthly%effprecip + daily%effprecip                            ! Add daily linear effective precip to monthly total    
    monthly%change_in_storage = monthly%change_in_storage + daily%change_in_storage    ! Add daily linear change in storage to monthly total    
    monthly%MAR_vol = monthly%MAR_vol + daily%MAR_vol                                  ! Add daily linear MAR volume to monthly total
-   monthly%runoff = monthly%runoff + daily%runoff                                    
+   monthly%runoff = monthly%runoff + daily%runoff                                     ! linear runoff monthly total
 
    !    write(*,*) sum(monthly%gw_irr_vol)
    !write(*,*) monthly%gw_irr_vol
@@ -740,11 +741,14 @@ MODULE SWBM_output
    END SUBROUTINE convert_length_to_volume
      
 !  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  SUBROUTINE write_MODFLOW_SFR(im, month, nSegs, model_name)
+
+  SUBROUTINE write_MODFLOW_SFR(im, month, nSegs, model_name, total_days, daily_sw)
     use ditch_module, only: is_ditch, write_ditch_diversion
+    implicit none
  
-    INTEGER, INTENT(IN) :: im, month, nSegs
+    INTEGER, INTENT(IN) :: im, month, nSegs, total_days
     CHARACTER(20), INTENT(IN) :: model_name
+    logical,intent(in)        :: daily_sw
     CHARACTER(24) :: sfr_file
     INTEGER :: i, iditch
    
@@ -752,10 +756,10 @@ MODULE SWBM_output
    
     if (im==1) then
       open(unit=213, file=trim(sfr_file), Access = 'append', status='old')
-      write(213,'(I4,A12)')nSegs,'  1  0  0  0'      ! Positive value after nSegs suppresses printing of SFR input data to listing file
-    else
-      write(213,'(I4,A12)')nSegs,'  1  0  0  0'      ! Positive value after nSegs suppresses printing of SFR input data to listing file
     end if
+
+    ! Item 3
+    write(213,'(I4,A12)')nSegs,'  1  0  0  0'      ! Positive value after nSegs suppresses printing of SFR input data to listing file
    
     do i = 1, nSegs
       ! LS ditch override (for now - TODO better integrate ditch module to modify existing SFR structure)
@@ -763,6 +767,7 @@ MODULE SWBM_output
       if (iditch > 0) then
         call write_ditch_diversion(213, iditch, month)
       else
+        ! Item 4b, code assumes icalc = 1
         if(SFR_Routing(i)%FLOW<0) SFR_Routing(i)%FLOW = 0   ! Remove negative flow rates caused by rounding errors
         !write(*,'(A20,I3,A3,es10.2)') "SFR_Routing%FLOW", i," : ", SFR_Routing(i)%FLOW
 
@@ -774,45 +779,171 @@ MODULE SWBM_output
             SFR_Routing(i)%OUTSEG, SFR_Routing(i)%IUPSEG, SFR_Routing(i)%IPRIOR, SFR_Routing(i)%FLOW, &
             SFR_Routing(i)%RUNOFF,'  0  0  ', SFR_Routing(i)%MANNING_N
         endif
+        ! Item 4c
         write(213,'(F7.2)')SFR_Routing(i)%WIDTH1
         write(213,'(F7.2)')SFR_Routing(i)%WIDTH2
-      end if    
+      end if
     enddo
+    
+    if (im==1) then
+      ! First stress period: Item 4g (according to NWT IO documentation, at least), the tabfiles
+      do i=1, nSegs
+        if (SFR_Routing(i)%tabunit > 0 .and. daily_sw) then  ! Has unit number == do tab
+          write(213, '(I3,I8,I4)') SFR_Routing(i)%NSEG, total_days, SFR_Routing(i)%tabunit
+        end if
+      end do
+    end if
      
   END SUBROUTINE  write_MODFLOW_SFR
- ! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-!  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   SUBROUTINE write_UCODE_SFR_template(im, nmonths, nSegs, model_name)
  
-   INTEGER, INTENT(IN) :: im, nmonths, nSegs
-   CHARACTER(20), INTENT(IN) :: model_name
-   CHARACTER(24) :: sfr_jtf_file
-   INTEGER :: i
+!  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  subroutine write_MODFLOW_SFR_tabfiles(im, numdays, simday, nSegs, daily_sw)
+    implicit none
+  
+    integer, intent(in)         :: im, numdays, simday, nSegs
+    logical, intent(in)         :: daily_sw
+    integer                     :: i, ntab, iday
+    character(30)               :: fname
+    
+    !TODO precalc
+    ntab = count(SFR_Routing(:)%tabunit > 0)
+    
+    ! Early exit if daily is off or none of the streams are using tabfiles.
+    if(daily_sw==.false. .or. ntab < 1) return
+    
+    if (im==1) then
+      ! Start tabfiles
+      do i=1, nSegs
+        if (SFR_Routing(i)%tabunit > 0) then  ! Has unit number == do tab
+          write(fname, '(a,I3.3,a)') 'SVIHM_tabfile_seg', SFR_Routing(i)%NSEG, '.tab'
+          open(tab_iunit_start+i-1, file=fname, status='replace')
+        end if
+      end do
+    end if
+    
+    do i=1, nSegs
+      if (SFR_Routing(i)%tabunit > 0) then ! Has unit number == do tab
+        do iday=1, numdays
+          write(tab_iunit_start+i-1, '(i8, es14.6)') simday-numdays+iday-1, SFR_Routing(i)%FLOW_DAILY(iday)   ! Last day of month - days in month + day-1 being written
+                                                                  ! The -1 was discovered by comparing MF results with & without the tabfile... poorly documented!
+        end do
+      end if
+    end do
+      
+  end subroutine write_MODFLOW_SFR_tabfiles
+  
+!  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+SUBROUTINE write_UCODE_SFR_template(im, month, nSegs, model_name, total_days, daily_sw)
+    use ditch_module, only: is_ditch, write_ditch_diversion
+    implicit none
+ 
+    INTEGER, INTENT(IN) :: im, month, nSegs, total_days
+    CHARACTER(20), INTENT(IN) :: model_name
+    logical,intent(in)        :: daily_sw
+    CHARACTER(24) :: sfr_jtf_file
+    INTEGER :: i, iditch
    
    sfr_jtf_file = trim(model_name) // '_sfr.jtf'
    
    if (im==1) then
      open(unit=214, file=trim(sfr_jtf_file), Access = 'append', status='old')
-     write(214,'(I4,A12)')nSegs,'  1  0  0  0'      ! Positive value after nSegs suppresses printing of SFR input data to listing file
-   else
-     write(214,'(I4,A12)')nSegs,'  1  0  0  0'      ! Positive value after nSegs suppresses printing of SFR input data to listing file
    end if
+
+    ! Item 3
+    write(214,'(I4,A12)')nSegs,'  1  0  0  0'      ! Positive value after nSegs suppresses printing of SFR input data to listing file
    
-   do i = 1, nSegs   	
-   	    if(SFR_Routing(i)%FLOW<0) SFR_Routing(i)%FLOW = 0   ! Remove negative flow rates caused by rounding errors
-   	    if(SFR_Routing(i)%IUPSEG == 0) then
-           write(214,'(I3,I3,I5,I5,es14.6,A11,A1,A20,A1)')SFR_Routing(i)%NSEG, SFR_Routing(i)%ICALC, SFR_Routing(i)%OUTSEG,&
-                SFR_Routing(i)%IUPSEG, SFR_Routing(i)%FLOW,'  0  0  0  ', '@',SFR_Routing(i)%Manning_n_Param, '@'
+    do i = 1, nSegs
+      ! LS ditch override (for now - TODO better integrate ditch module to modify existing SFR structure)
+      iditch = is_ditch(SFR_Routing(i)%NSEG)
+      if (iditch > 0) then
+        call write_ditch_diversion(214, iditch, month)
+      else
+        ! Item 4b, code assumes icalc = 1
+        if(SFR_Routing(i)%FLOW<0) SFR_Routing(i)%FLOW = 0   ! Remove negative flow rates caused by rounding errors
+        if(SFR_Routing(i)%IUPSEG == 0) then ! If no upstream segment (i.e. segment is an inflow segment)
+           write(214,'(I3,I5,I5,I5,2es14.6,A8,A1,A20,A1)')SFR_Routing(i)%NSEG, SFR_Routing(i)%ICALC, SFR_Routing(i)%OUTSEG,&
+                SFR_Routing(i)%IUPSEG, SFR_Routing(i)%FLOW, SFR_Routing(i)%RUNOFF,'  0  0  ', '@', SFR_Routing(i)%Manning_n_Param, '@'
          elseif(SFR_Routing(i)%IUPSEG > 0) then
-           write(214,'(I5,I3,I5,I5,I3,es14.6,A11,A1,A20,A1)')SFR_Routing(i)%NSEG, SFR_Routing(i)%ICALC,& 
-                SFR_Routing(i)%OUTSEG, SFR_Routing(i)%IUPSEG, SFR_Routing(i)%IPRIOR, SFR_Routing(i)%FLOW,'  0  0  0  ',&
-                '@', SFR_Routing(i)%Manning_n_Param, '@'
-         endif
+           write(214,'(I3,I5,I5,I5,I3,es14.6,A8,A1,A20,A1)')SFR_Routing(i)%NSEG, SFR_Routing(i)%ICALC,& 
+            SFR_Routing(i)%OUTSEG, SFR_Routing(i)%IUPSEG, SFR_Routing(i)%IPRIOR, SFR_Routing(i)%FLOW, &
+            SFR_Routing(i)%RUNOFF,'  0  0  ', '@', SFR_Routing(i)%Manning_n_Param, '@'
+        endif
+        ! Item 4c
          write(214,'(F7.2)')SFR_Routing(i)%WIDTH1
          write(214,'(F7.2)')SFR_Routing(i)%WIDTH2
+      end if
    enddo
+    if (im==1) then
+      ! First stress period: Item 4g (according to NWT IO documentation, at least), the tabfiles
+      do i=1, nSegs
+        if (SFR_Routing(i)%tabunit > 0 .and. daily_sw) then  ! Has unit number == do tab
+          write(214, '(I3,I8,I4)') SFR_Routing(i)%NSEG, total_days, SFR_Routing(i)%tabunit
+        end if
+      end do
+    end if
      
    END SUBROUTINE  write_UCODE_SFR_template
+
+!  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   
+   SUBROUTINE write_PEST_SFR_template(im, month, nSegs, model_name, total_days, daily_sw)
+    use ditch_module, only: is_ditch, write_ditch_diversion
+    implicit none
+    
+    ! Not implemented (not called anywhere) as of 8/3/2023
+    ! Honestly - it's no different than the UCODE version. It would be best to add a "template file character" to an input file
+    ! so we could vary the "parameter delimiter" (hardcoded to @). Then just use the same subroutine - LS
+ 
+    INTEGER, INTENT(IN) :: im, month, nSegs, total_days
+    CHARACTER(20), INTENT(IN) :: model_name
+    logical,intent(in)        :: daily_sw
+    CHARACTER(24) :: sfr_tpl_file
+    INTEGER :: i, iditch
+   
+   sfr_tpl_file = trim(model_name) // '_sfr.tpl'
+   
+   if (im==1) then
+     open(unit=214, file=trim(sfr_tpl_file), Access = 'append', status='old')
+   end if
+
+    ! Item 3
+    write(214,'(I4,A12)')nSegs,'  1  0  0  0'      ! Positive value after nSegs suppresses printing of SFR input data to listing file
+   
+    do i = 1, nSegs
+      ! LS ditch override (for now - TODO better integrate ditch module to modify existing SFR structure)
+      iditch = is_ditch(SFR_Routing(i)%NSEG)
+      if (iditch > 0) then
+        call write_ditch_diversion(214, iditch, month)
+      else
+        ! Item 4b, code assumes icalc = 1
+        if(SFR_Routing(i)%FLOW<0) SFR_Routing(i)%FLOW = 0   ! Remove negative flow rates caused by rounding errors
+        if(SFR_Routing(i)%IUPSEG == 0) then ! If no upstream segment (i.e. segment is an inflow segment)
+           write(214,'(I3,I5,I5,I5,2es14.6,A8,A1,A20,A1)')SFR_Routing(i)%NSEG, SFR_Routing(i)%ICALC, SFR_Routing(i)%OUTSEG,&
+                SFR_Routing(i)%IUPSEG, SFR_Routing(i)%FLOW, SFR_Routing(i)%RUNOFF,'  0  0  ', '@', SFR_Routing(i)%Manning_n_Param, '@'
+         elseif(SFR_Routing(i)%IUPSEG > 0) then
+           write(214,'(I3,I5,I5,I5,I3,es14.6,A8,A1,A20,A1)')SFR_Routing(i)%NSEG, SFR_Routing(i)%ICALC,& 
+            SFR_Routing(i)%OUTSEG, SFR_Routing(i)%IUPSEG, SFR_Routing(i)%IPRIOR, SFR_Routing(i)%FLOW, &
+            SFR_Routing(i)%RUNOFF,'  0  0  ', '@', SFR_Routing(i)%Manning_n_Param, '@'
+        endif
+        ! Item 4c
+         write(214,'(F7.2)')SFR_Routing(i)%WIDTH1
+         write(214,'(F7.2)')SFR_Routing(i)%WIDTH2
+      end if
+   enddo
+    if (im==1) then
+      ! First stress period: Item 4g (according to NWT IO documentation, at least), the tabfiles
+      do i=1, nSegs
+        if (SFR_Routing(i)%tabunit > 0 .and. daily_sw) then  ! Has unit number == do tab
+          write(214, '(I3,I8,I4)') SFR_Routing(i)%NSEG, total_days, SFR_Routing(i)%tabunit
+        end if
+      end do
+    end if
      
+   END SUBROUTINE  write_PEST_SFR_template
+
+!  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
 END MODULE
-     

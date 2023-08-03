@@ -26,7 +26,7 @@ PROGRAM SWBM
   
   IMPLICIT NONE
 
-  INTEGER :: nmonths, numdays, WY, month, jday, i, im, nrows, ncols, ncmds, dummy, WYstart
+  INTEGER :: nmonths, numdays, WY, month, jday, i, im, nrows, ncols, ncmds, dummy, WYstart, simday, total_days, loopdays
   INTEGER :: n_wel_param, num_daily_out, unit_num, nSFR_inflow_segs!, num_MAR_fields
   INTEGER, ALLOCATABLE, DIMENSION(:,:) :: rch_zones, ET_Zone_Cells
   INTEGER, ALLOCATABLE, DIMENSION(:)   :: ip_daily_out, ndays, SFR_inflow_segs!, MAR_fields
@@ -41,7 +41,7 @@ PROGRAM SWBM
   CHARACTER(400) :: cmd
   CHARACTER(50), ALLOCATABLE, DIMENSION(:) :: daily_out_name
   INTEGER, DIMENSION(31) :: ET_Active
-  LOGICAL :: MAR_active, ILR_active, daily_out_flag, inflow_is_vol, ag_wells_specified, using_neighbor_irr_rule
+  LOGICAL :: MAR_active, ILR_active, daily_out_flag, inflow_is_vol, ag_wells_specified, using_neighbor_irr_rule, daily_sw
   REAL :: eff_precip
  
   CALL cpu_time(start)
@@ -61,7 +61,7 @@ PROGRAM SWBM
   Total_Ref_ET = 0.
   open(unit=10, file='general_inputs.txt', status='old')
   read(10, *) model_name, WYstart, npoly, nlandcover, nAgWells, nMuniWells, nSubws
-  read(10, *) inflow_is_vol, nSFR_inflow_segs, nmonths, nrows, ncols
+  read(10, *) inflow_is_vol, daily_sw, nSFR_inflow_segs, nmonths, nrows, ncols
   read(10, *) RD_Mult, SFR_Template
   read(10, *) using_neighbor_irr_rule ! Neighbor-irrigating rule: Do farmers look to neighbor behavior for irrigation onset [TRUE] or only own field's soil moisture [FALSE]
   !LS Get Irrigation ditch input file
@@ -177,16 +177,22 @@ PROGRAM SWBM
   read(220,*)                  ! Read header into nothing
   fields%irr_flag = 0          ! Initialize irrigating status flag array
   month = 10                   ! Initialize month variable to start in October
+  simday = 0                   ! Counter of day of simulation
+  total_days = sum(ndays(:))   ! Total days in simulation
+  loopdays = 1
   
   ! open(unit=801, file= trim(model_name)//'.mnw2', Access = 'append', status='old')       
   WY = WYstart   ! water year
   do im=1, nmonths                ! Loop over each month
+    numdays = ndays(im)        ! Number of days in the current month
+      if (daily_sw) loopdays = numdays  ! needed for reading daily values, when doing daily sw calcs
     read(82,*) date_text, fields(:)%landcover_id           ! read in landuse type (by field, for each month)
     !write(*,*) fields(1)%landcover_id
     read(86,*) date_text, fields(:)%mar_depth     ! read in MAR application volumes (not driven by irrigation demand) (by field, for each month)
     read(87,*) date_text, fields(:)%curtail_frac   ! read in curtailment fractions  (by field, for each month)
-   
-    read(85,*) date_text, SFR_allocation(:)%frac_subws_flow        ! read in multiplier for converting remaining subwatershed flows to SFR inflows
+    do jday=1, loopdays
+      read(85,*) date_text, SFR_allocation(:)%frac_subws_flow(jday)        ! read in multiplier for converting remaining subwatershed flows to SFR inflows
+    end do
     read(537,*)  date_text, ag_wells_specified, ag_wells(:)%specified_volume 
     read(539,*) date_text, muni_wells(:)%specified_volume
     if (im==1) CALL initial_conditions                  ! initialize soil-water content for fields  
@@ -195,15 +201,15 @@ PROGRAM SWBM
     elseif (month==13) then
     	month = 1                ! Reset month to January
     endif
-    numdays = ndays(im)        ! Number of days in the current month
     Total_Ref_ET = 0.          ! Reset monthly Average ET
     CALL zero_month                               ! Zero out monthly accumulated volume
-    CALL read_monthly_stream_inflow(inflow_is_vol, numdays)
+    CALL read_monthly_stream_inflow(inflow_is_vol, numdays, daily_sw)
     write(*,'(a15, i3,a13,i2,a18,i2)')'Stress Period: ',im,'   Month ID: ',month,'   Length (days): ', numdays
     write(800,'(a15, i3,a13,i2,a18,i2)')'Stress Period: ',im,'   Month ID: ',month,'   Length (days): ', numdays
     
     read(220,*) drain_flow(im)                       ! Read drain flow into array         
     do jday=1, numdays                              ! Loop over days in each month
+      simday = simday + 1
       if (jday==1) monthly%ET_active = 0            ! Set ET counter to 0 at the beginning of the month. Used for turning ET on and off in MODFLOW so it is not double counted.    
       daily%ET_active  = 0                          ! Reset ET active counter
       daily%tot_irr = 0.                            ! Reset daily tot_irr value to zero
@@ -254,7 +260,7 @@ PROGRAM SWBM
       CALL monthly_SUM                                                            ! add daily value to monthly total (e.g., monthly%tot_irr = monthly%tot_irr + daily%tot_irr)
       CALL annual_SUM                                                             ! add daily value to annual total (e.g., yearly%tot_irr = yearly%tot_irr + daily%tot_irr)
       if (jday==numdays) then                                         
-      	CALL SFR_streamflow(npoly, numdays, nSubws, nSegs, nSFR_inflow_segs, month)      ! Convert remaining surface water and runoff to SFR inflows at end of the month	
+      	CALL SFR_streamflow(npoly, numdays, nSubws, nSegs, nSFR_inflow_segs, month, daily_sw)      ! Convert remaining surface water and runoff to SFR inflows at end of the month	
         ann_spec_ag_vol = ann_spec_ag_vol + SUM(ag_wells%specified_volume)	      ! add monthly specified ag pumping volume to annual total
         ann_spec_muni_vol = ann_spec_muni_vol + SUM(muni_wells%specified_volume)  ! add monthly specified volume to annual total
       endif
@@ -265,8 +271,9 @@ PROGRAM SWBM
     CALL write_MODFLOW_RCH(im,numdays,nrows,ncols,rch_zones)
     CALL write_MODFLOW_ETS(im,numdays,nrows,ncols,rch_zones,Total_Ref_ET,ET_Zone_Cells, ET_Cells_ex_depth, npoly)
     CALL print_monthly_output(im, nlandcover, nSubws)
-    CALL write_MODFLOW_SFR(im, month, nSegs, model_name)
-    CALL write_UCODE_SFR_template(im, nmonths, nSegs, model_name)   ! Write JTF file for UCODE 
+    CALL write_MODFLOW_SFR(im, month, nSegs, model_name, total_days, daily_sw)
+    CALL write_MODFLOW_SFR_tabfiles(im, numdays, simday, nSegs, daily_sw)
+    CALL write_UCODE_SFR_template(im, month, nSegs, model_name, total_days, daily_sw)   ! Write JTF file for UCODE 
     CALL write_MODFLOW_WEL(im, month, nAgWells, n_wel_param, model_name)       
     ! CALL write_MODFLOW_MNW2(im, nAgWells, nMuniWells, ag_wells_specified)          
     if (month==9) then
