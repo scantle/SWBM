@@ -142,7 +142,7 @@ MODULE irrigation
       SFR_Routing(seg)%FLOW = (temp_flow*avg_frac)/numdays
       
       if (daily_sw .and. surfaceWater(wsid)%avail_sw_vol > 0.0) then
-        flowsum = sum(surfaceWater(wsid)%inflow_irr(:))
+        flowsum = sum(surfaceWater(wsid)%inflow_irr(1:looplen))
         ! For daily flow, we subtract out a flow-proporational fraction of the monthly average irrigation rate.
         ! Subwatershed/Segments with zero flow left at the end of the month (avail_sw_vol = 0) get skipped -
         ! this leaves them with zero flow every day. This is equivalent to just subtracting out flow when it's 

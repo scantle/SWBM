@@ -273,7 +273,7 @@ PROGRAM SWBM
     CALL print_monthly_output(im, nlandcover, nSubws)
     CALL write_MODFLOW_SFR(im, month, nSegs, model_name, total_days, daily_sw)
     CALL write_MODFLOW_SFR_tabfiles(im, numdays, simday, nSegs, daily_sw)
-    CALL write_UCODE_SFR_template(im, nmonths, nSegs, model_name)   ! Write JTF file for UCODE 
+    CALL write_UCODE_SFR_template(im, month, nSegs, model_name, total_days, daily_sw)   ! Write JTF file for UCODE 
     CALL write_MODFLOW_WEL(im, month, nAgWells, n_wel_param, model_name)       
     ! CALL write_MODFLOW_MNW2(im, nAgWells, nMuniWells, ag_wells_specified)          
     if (month==9) then
