@@ -768,7 +768,7 @@ MODULE SWBM_output
         call write_ditch_diversion(213, iditch, month)
       else
         ! Item 4b, code assumes icalc = 1
-        if(SFR_Routing(i)%FLOW<0) SFR_Routing(i)%FLOW = 0   ! Remove negative flow rates caused by rounding errors
+        if(SFR_Routing(i)%FLOW<0) SFR_Routing(i)%FLOW = 0.0   ! Remove negative flow rates caused by rounding errors
         !write(*,'(A20,I3,A3,es10.2)') "SFR_Routing%FLOW", i," : ", SFR_Routing(i)%FLOW
 
         if(SFR_Routing(i)%IUPSEG == 0) then ! If no upstream segment (i.e. segment is an inflow segment)
@@ -825,6 +825,7 @@ MODULE SWBM_output
     do i=1, nSegs
       if (SFR_Routing(i)%tabunit > 0) then ! Has unit number == do tab
         do iday=1, numdays
+          if(SFR_Routing(i)%FLOW_DAILY(iday)<0.0) SFR_Routing(i)%FLOW_DAILY(iday) = 0.0   ! Remove negative flow rates caused by rounding errors
           write(tab_iunit_start+i-1, '(i8, es14.6)') simday-numdays+iday-1, SFR_Routing(i)%FLOW_DAILY(iday)   ! Last day of month - days in month + day-1 being written
                                                                   ! The -1 was discovered by comparing MF results with & without the tabfile... poorly documented!
         end do

@@ -158,6 +158,9 @@ MODULE irrigation
         !  write(*,'(2(a,i3),a,es14.6)') 'Negative flow value on day', minloc(SFR_Routing(seg)%FLOW_DAILY(:)), &
         !                       ' | segment', i, '| Value:', minval(SFR_Routing(seg)%FLOW_DAILY(:))
         !end if
+      else if (daily_sw .and. surfaceWater(wsid)%avail_sw_vol == 0.0) then 
+        ! The available flow will just be the daily nonirrigation inflow
+        SFR_Routing(seg)%FLOW_DAILY(1:looplen) = surfaceWater(wsid)%inflow_nonirr(1:looplen) * SFR_allocation(i)%frac_subws_flow(1:looplen)
       end if
       ! Debug
       !if (i==1) write(*,'(3a5,4a14)') 'i','wsid','seg','SWRemainder','AvgDailyPump','Flow','AvgDailyFlow'
