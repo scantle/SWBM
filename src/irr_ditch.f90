@@ -56,7 +56,10 @@ module ditch_module
     character(256)             :: cerr
     
     open(unit, file=trim(filename), status='old', iostat=ierr, iomsg=cerr)
-    ! TODO handle file missing
+    if (ierr /= 0) then
+      write(*,*) trim(cerr)
+      stop
+    end if
 
     ! Number of ditches, conversion factor
     call read_to_data(unit)
