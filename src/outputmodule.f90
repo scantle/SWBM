@@ -846,7 +846,7 @@ SUBROUTINE write_UCODE_SFR_template(im, month, nSegs, model_name, total_days, da
     CHARACTER(24) :: sfr_jtf_file
     INTEGER :: i, iditch
    
-   sfr_jtf_file = trim(model_name) // '_sfr.jtf'
+   sfr_jtf_file = trim(model_name) // '_SFR.jtf'
    
    if (im==1) then
      open(unit=214, file=trim(sfr_jtf_file), Access = 'append', status='old')
