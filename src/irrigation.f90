@@ -184,9 +184,9 @@ MODULE irrigation
   end subroutine SFR_streamflow
   
   ! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  SUBROUTINE IRRIGATION_RULESET(ip, month, jday, irrigating)
+  SUBROUTINE IRRIGATION_RULESET(ip, month, jday, irrigating, numdays)
   
-    INTEGER, INTENT(IN) :: ip, month, jday
+    INTEGER, INTENT(IN) :: ip, month, jday, numdays
     INTEGER :: subws
     LOGICAL :: irrigating
     REAL :: irreff   
@@ -223,8 +223,7 @@ MODULE irrigation
           fields(ip)%irr_flag = 1 ! Set field status to irrigating (even if already the case)
           daily(ip)%tot_irr=max(0.,((daily(ip)%pET-daily(ip)%effprecip)/irreff))                                   ! Calculate applied linear irrigation (depth units)
           daily(ip)%tot_irr = daily(ip)%tot_irr * (1 - fields(ip)%curtail_frac)                                    ! Subtract curtailment fraction (default: 0) from calculated irr. demand
-          daily(ip)%tot_irr = daily(ip)%tot_irr + fields(ip)%mar_depth                                             ! Add MAR depth (default: 0) to total irrigation
-      select case (fields(ip)%water_source)                                                                        ! Assign irrigation to water source
+          select case (fields(ip)%water_source)                                                                        ! Assign irrigation to water source
     		case(1) ! surface water
           !write(*,'(a10,I3,A24,F16.4)') "subws:", subws, "subws avail sw vol: ", surfaceWater(subws)%avail_sw_vol
           !if(ip==1627) write(*,'(I4,F8.1)') jday, daily(ip)%tot_irr * fields(ip)%area
@@ -263,6 +262,9 @@ MODULE irrigation
     	  	daily(ip)%gw_irr = daily(ip)%tot_irr  ! All irrigation assigned to groundwater well
     	end select
     endif
+    
+    daily(ip)%tot_irr = daily(ip)%tot_irr + daily(ip)%mar_depth       ! Regardless of "irrigating" status, add MAR depth (default: 0) to total irrigation
+
 
     !if(daily(ip)%gw_irr > 1000000) then ! if it's infinity
     !  write(*,'(A25,I5)') "infinite GW on field id ", ip
@@ -275,11 +277,11 @@ MODULE irrigation
   
 ! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   
-  SUBROUTINE water_budget(ip,jday,month,moisture_save,MAR_active)
+  SUBROUTINE water_budget(ip,jday,month)!,moisture_save,MAR_active)
   
     INTEGER, INTENT (IN) :: ip, jday, month
-    REAL, DIMENSION(npoly), INTENT(inout) :: moisture_save
-    LOGICAL, INTENT(in)  :: MAR_active
+    !REAL, DIMENSION(npoly), INTENT(inout) :: moisture_save
+    !LOGICAL, INTENT(in)  :: MAR_active
     REAL:: rch
   
     daily(ip)%aET=min(daily(ip)%pET, previous(ip)%swc+daily(ip)%effprecip+daily(ip)%tot_irr)  ! Actual ET for field ip is the pET (if enough soil water) or sum of yesterday's SWC, today's eff. precip, and the total irrigation (if not enough soil water)
@@ -288,17 +290,22 @@ MODULE irrigation
     rch = max(0., (previous(ip)%swc+daily(ip)%effprecip+daily(ip)%tot_irr-daily(ip)%aET)-& ! Recharge is sum(yesterday's SWC, today's eff. precip, and today's total irrigation) minus today's aET, minus the field's water holding capacity
     fields(ip)%whc*crops(fields(ip)%landcover_id)%RootDepth)
 
-    ! Temporarily disabling the runoff calculation function for comparison to basecase
+    ! Temporarily disabling the runoff calculation function for comparison to basecase.
+        ! Questions for TH: how allow for ponding? 
     !if (rch > fields(ip)%max_infil_rate) then
-    !	daily(ip)%runoff = (rch - fields(ip)%max_infil_rate) ! Calculate runoff if recharge exceeds field's max infiltration rate
-   ! 	rch = fields(ip)%max_infil_rate
+    !    ! when is this an issue? print which fields it's exceeding on?
+    !    print *, '("Rch > max_infil_rate - poly ", ip, "month", month, " jday", jday)'
+    !        if(daily(ip)%mar_depth == 0) then !  if mar is active on this field, do nothing. do not implement runoff (allow for ponding and eventual infiltration)
+    !           daily(ip)%runoff = (rch - fields(ip)%max_infil_rate) ! calculate runoff if recharge exceeds field's max infiltration rate
+    !            rch = fields(ip)%max_infil_rate
+    !        endif
     !endif
     daily(ip)%recharge = rch
     daily(ip)%swc=max(0.,previous(ip)%swc+daily(ip)%effprecip+daily(ip)%tot_irr- & ! today's SWC = yesterday's SWC + today's precip + irrigation 
       daily(ip)%aET-daily(ip)%recharge-daily(ip)%runoff)                           !- aET - recharge - runoff
     daily(ip)%residual = daily(ip)%swc-previous(ip)%swc+daily(ip)%aET+daily(ip)%recharge+daily(ip)%runoff- &
                        daily(ip)%effprecip-daily(ip)%tot_irr       
-    if (MAR_active) moisture_save(ip) = previous(ip)%swc 
+    !if (MAR_active) moisture_save(ip) = previous(ip)%swc 
     previous(ip)%swc = daily(ip)%swc
     daily(ip)%change_in_storage = daily(ip)%effprecip+daily(ip)%tot_irr-daily(ip)%aET-daily(ip)%recharge-daily(ip)%runoff	
   

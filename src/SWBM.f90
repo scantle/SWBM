@@ -32,7 +32,7 @@ PROGRAM SWBM
   INTEGER, ALLOCATABLE, DIMENSION(:)   :: ip_daily_out, ndays, SFR_inflow_segs!, MAR_fields
   REAL, ALLOCATABLE, DIMENSION(:,:) :: ET_Cells_ex_depth
   REAL :: stn_precip, Total_Ref_ET, MAR_vol
-  REAL, ALLOCATABLE, DIMENSION(:)  :: drain_flow, max_MAR_field_rate, moisture_save
+  REAL, ALLOCATABLE, DIMENSION(:)  :: drain_flow, max_MAR_field_rate!, moisture_save
   REAL :: start, finish
   CHARACTER(10) :: SFR_Template, suffix, date_text ! , scenario
   !CHARACTER(10) :: recharge_scenario, flow_lim_scenario, nat_veg_scenario
@@ -130,19 +130,19 @@ PROGRAM SWBM
   open(unit=82, file = 'polygon_landcover_ids.txt', status = 'old')
   read(82,*)  ! read header into nothing
 
-  MAR_active = .false. ! Need to get rid of this MAR_active artifact - mar depths gets read as an input file now
- if (MAR_active) then
+  !MAR_active = .false. ! Need to get rid of this MAR_active artifact - mar depths gets read as an input file now
+ !if (MAR_active) then
 !    open(unit=10,file='MAR_Fields.txt',status='old')      ! Read in MAR recharge matrix
 !    read(10,*) num_MAR_fields, MAR_vol
 !    ALLOCATE(MAR_fields(num_MAR_fields))                  ! Array of MAR field polygon IDs
 !    ALLOCATE(max_MAR_field_rate(num_MAR_fields))          ! Array of maximum infiltration rate for MAR fields (1/10th lowest SSURGO value)
-    ALLOCATE(moisture_save(npoly))                        ! Array of soil-swc needed to recalculate recharge for MAR fields
-    moisture_save = 0.                                    ! Initialize array
+ !   ALLOCATE(moisture_save(npoly))                        ! Array of soil-swc needed to recalculate recharge for MAR fields
+ !   moisture_save = 0.                                    ! Initialize array
 !    do i=1, num_MAR_fields
 !      read(10,*)MAR_fields(i), max_MAR_field_rate(i)
 !    enddo
 !    close(10)
-  endif
+!  endif
 
   ! Input files specifying field-by-field, 1 per stress period values
   open(unit=86, file = 'MAR_depth.txt', status = 'old')
@@ -188,7 +188,7 @@ PROGRAM SWBM
       if (daily_sw) loopdays = numdays  ! needed for reading daily values, when doing daily sw calcs
     read(82,*) date_text, fields(:)%landcover_id           ! read in landuse type (by field, for each month)
     !write(*,*) fields(1)%landcover_id
-    read(86,*) date_text, fields(:)%mar_depth     ! read in MAR application volumes (not driven by irrigation demand) (by field, for each month)
+    read(86,*) date_text, fields(:)%mar_depth     ! read in monthly MAR application depths (not driven by irrigation demand) (by field, for each month)
     read(87,*) date_text, fields(:)%curtail_frac   ! read in curtailment fractions  (by field, for each month)
     do jday=1, loopdays
       read(85,*) date_text, SFR_allocation(:)%frac_subws_flow(jday)        ! read in multiplier for converting remaining subwatershed flows to SFR inflows
@@ -223,6 +223,7 @@ PROGRAM SWBM
       read(887,*) stn_precip
       read(79,*) date_text, crops(:)%daily_kc 
       daily%effprecip = stn_precip * fields%precip_fact
+      daily%mar_depth = fields(:)%mar_depth / numdays
       ! CUrrently here - checking pET for native veg land use
       !write(*,'(A25,F4.2,F4.2)') "natveg k_c and kc_mult: ",crops(4)%daily_kc, crops(4)%kc_mult
       daily%pET=ETo * crops(fields%landcover_id)%daily_kc * crops(fields%landcover_id)%kc_mult                        ! Set ET to current value for the day
@@ -244,17 +245,16 @@ PROGRAM SWBM
         !if (ILR_active) then
           ! CALL IRRIGATION_ILR(ip, month, jday, eff_precip)
 	      !else
-	      CALL IRRIGATION_RULESET(ip, month, jday, irrigating)
+	      CALL IRRIGATION_RULESET(ip, month, jday, irrigating, numdays)
 	      !endif 
-	      CALL water_budget(ip,jday,month,moisture_save,MAR_active)   
+	      CALL water_budget(ip,jday,month)!,moisture_save,MAR_active)   
         if (month==12 .and. jday==31 .and. ip==npoly) then               ! If last day of the year, set tot_irr flags and logical to zero
 		      fields%irr_flag = 0         
 		      irrigating = .false.
           abs_irr_date_passed = .false.
  	        CALL IRR2CP(WY)                          ! Convert fields to center pivot irrigation
 	      endif
-       enddo              ! End of polygon loop! if (MAR_active) then 
-      ! CALL MAR(month, num_MAR_fields, MAR_fields, max_MAR_field_rate, MAR_vol, eff_precip, jday, moisture_save)
+       enddo              
       if (daily_out_flag) CALL daily_out(num_daily_out,ip_daily_out)              ! Print Daily Output for Selected Fields
       CALL groundwater_pumping(jday, nAgWells, npoly, numdays, daily_out_flag, ag_wells_specified)      ! Assign gw_irr to wells
       CALL monthly_SUM                                                            ! add daily value to monthly total (e.g., monthly%tot_irr = monthly%tot_irr + daily%tot_irr)

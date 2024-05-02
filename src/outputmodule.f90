@@ -171,7 +171,7 @@ MODULE SWBM_output
    monthly%ET_active = monthly%ET_active + daily%ET_active                            ! Add daily linear ET to monthly total    
    monthly%effprecip = monthly%effprecip + daily%effprecip                            ! Add daily linear effective precip to monthly total    
    monthly%change_in_storage = monthly%change_in_storage + daily%change_in_storage    ! Add daily linear change in storage to monthly total    
-   monthly%MAR_vol = monthly%MAR_vol + daily%MAR_vol                                  ! Add daily linear MAR volume to monthly total
+   monthly%mar_depth = monthly%mar_depth + daily%mar_depth                            ! Add daily linear MAR depth to monthly total
    monthly%runoff = monthly%runoff + daily%runoff                                     ! linear runoff monthly total
 
    !    write(*,*) sum(monthly%gw_irr_vol)
@@ -192,7 +192,7 @@ MODULE SWBM_output
    yearly%ET_active = yearly%ET_active + daily%ET_active                          ! Add daily linear ET to yearly total    
    yearly%effprecip = yearly%effprecip + daily%effprecip                          ! Add daily linear effective precip to yearly total    
    yearly%change_in_storage = yearly%change_in_storage + daily%change_in_storage  ! Add daily linear change in storage to yearly total    
-   yearly%MAR_vol = yearly%MAR_vol + daily%MAR_vol                                ! Add daily linear MAR to annual total
+   yearly%mar_depth = yearly%mar_depth + daily%mar_depth                          ! Add daily linear MAR depth to annual total
   
   END SUBROUTINE annual_SUM
 !  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -12,9 +12,9 @@ END TYPE
 TYPE accumulator
 	INTEGER :: daydef, ET_active
 	REAL :: tot_irr, gw_irr, recharge, swc, pET, aET, deficiency, change_in_storage
-  REAL :: effprecip, MAR, residual, tot_irr_vol, recharge_vol, gw_irr_vol, swc_vol
-	REAL :: pET_vol, aET_vol, deficiency_vol, change_in_storage_vol, effprecip_vol, MAR_vol
-	REAL :: runoff, runoff_vol
+  REAL :: effprecip, residual, tot_irr_vol, recharge_vol, gw_irr_vol, swc_vol!,MAR
+	REAL :: pET_vol, aET_vol, deficiency_vol, change_in_storage_vol, effprecip_vol!, MAR_vol
+	REAL :: runoff, runoff_vol, mar_depth
 END TYPE
 
 TYPE well
@@ -202,8 +202,7 @@ subroutine zero_month
   monthly%deficiency = 0.      
   monthly%effprecip = 0.          
   monthly%change_in_storage = 0.          
-  monthly%MAR = 0.  
-  monthly%MAR_vol = 0.
+  monthly%mar_depth = 0.  
   monthly%runoff = 0.            
     
 end subroutine zero_month
@@ -219,8 +218,7 @@ subroutine zero_year
   yearly%deficiency = 0. 
   yearly%effprecip = 0. 
   yearly%change_in_storage = 0.
-  yearly%MAR = 0.
-  yearly%MAR_vol = 0.
+  yearly%mar_depth = 0.
   yearly%runoff = 0.
   
   ann_spec_ag_vol = 0.
