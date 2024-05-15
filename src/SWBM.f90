@@ -28,6 +28,7 @@ PROGRAM SWBM
 
   INTEGER :: nmonths, numdays, WY, month, jday, i, im, nrows, ncols, ncmds, dummy, WYstart, simday, total_days, loopdays
   INTEGER :: n_wel_param, num_daily_out, unit_num, nSFR_inflow_segs!, num_MAR_fields
+  INTEGER :: abs_irr_month, abs_irr_day
   INTEGER, ALLOCATABLE, DIMENSION(:,:) :: rch_zones, ET_Zone_Cells
   INTEGER, ALLOCATABLE, DIMENSION(:)   :: ip_daily_out, ndays, SFR_inflow_segs!, MAR_fields
   REAL, ALLOCATABLE, DIMENSION(:,:) :: ET_Cells_ex_depth
@@ -41,7 +42,7 @@ PROGRAM SWBM
   CHARACTER(400) :: cmd
   CHARACTER(50), ALLOCATABLE, DIMENSION(:) :: daily_out_name
   INTEGER, DIMENSION(31) :: ET_Active
-  LOGICAL :: MAR_active, ILR_active, daily_out_flag, inflow_is_vol, ag_wells_specified, using_neighbor_irr_rule, daily_sw
+  LOGICAL :: MAR_active, ILR_active, daily_out_flag, inflow_is_vol, ag_wells_specified, using_neighbor_irr_rule, using_abs_irr_date, daily_sw
   REAL :: eff_precip
  
   CALL cpu_time(start)
@@ -64,6 +65,14 @@ PROGRAM SWBM
   read(10, *) inflow_is_vol, daily_sw, nSFR_inflow_segs, nmonths, nrows, ncols
   read(10, *) RD_Mult, SFR_Template
   read(10, *) using_neighbor_irr_rule ! Neighbor-irrigating rule: Do farmers look to neighbor behavior for irrigation onset [TRUE] or only own field's soil moisture [FALSE]
+  read(10, *) using_abs_irr_date
+  if (using_abs_irr_date) then  ! Go back one line and re-read for values
+    backspace(10)
+    read(10, *) using_abs_irr_date , abs_irr_month, abs_irr_day
+  else  ! Sanitize for safety
+    abs_irr_month = 999
+    abs_irr_day   = 999
+  end if
   !LS Get Irrigation ditch input file
   read(10, *) ditch_file
   close (10)
@@ -236,8 +245,8 @@ PROGRAM SWBM
         endif
       endif
       
-      if (abs_irr_date_passed == .false. .and. month==5.and.jday>=15) then
-          abs_irr_date_passed = .TRUE.
+      if (using_abs_irr_date) then ! If the abs_irr_date exists... check to see if we've hit that date
+        if (month==abs_irr_month.and.jday>=abs_irr_day) irrigating = .TRUE.
       end if
 
       do ip=1, npoly
@@ -251,7 +260,6 @@ PROGRAM SWBM
         if (month==12 .and. jday==31 .and. ip==npoly) then               ! If last day of the year, set tot_irr flags and logical to zero
 		      fields%irr_flag = 0         
 		      irrigating = .false.
-          abs_irr_date_passed = .false.
  	        CALL IRR2CP(WY)                          ! Convert fields to center pivot irrigation
 	      endif
        enddo              
