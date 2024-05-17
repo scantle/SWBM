@@ -36,7 +36,7 @@ PROGRAM SWBM
   INTEGER, ALLOCATABLE, DIMENSION(:)   :: ip_daily_out, ndays, SFR_inflow_segs!, MAR_fields
   REAL, ALLOCATABLE, DIMENSION(:,:) :: ET_Cells_ex_depth
   REAL :: stn_precip, Total_Ref_ET, MAR_vol
-  REAL, ALLOCATABLE, DIMENSION(:)  :: drain_flow, max_MAR_field_rate!, moisture_save
+  REAL, ALLOCATABLE, DIMENSION(:)  :: max_MAR_field_rate!, moisture_save
   REAL :: start, finish
   CHARACTER(10) :: SFR_Template, suffix, date_text ! , scenario
   !CHARACTER(10) :: recharge_scenario, flow_lim_scenario, nat_veg_scenario
@@ -108,7 +108,6 @@ PROGRAM SWBM
   ALLOCATE(rch_zones(nrows,ncols))
   ALLOCATE(ET_Zone_Cells(nrows,ncols))
   ALLOCATE(ET_Cells_ex_depth(nrows,ncols))
-  ALLOCATE(drain_flow(nmonths))
   
   open(unit=218,file='ET_Zone_Cells.txt',status='old')      ! Read in 1-0 grid of cells with MODFLOW ET-from-groundwater zones
   read(218,*) ET_Zone_Cells 
@@ -161,8 +160,6 @@ PROGRAM SWBM
   endif
 
   CALL output_files(model_name, daily_out_flag)
-  open (unit=220, file='Drains_m3day.txt')
-  read(220,*)                  ! Read header into nothing
   fields%irr_flag = 0          ! Initialize irrigating status flag array
   month = 10                   ! Initialize month variable to start in October
   simday = 0                   ! Counter of day of simulation
@@ -194,8 +191,7 @@ PROGRAM SWBM
     CALL read_monthly_stream_inflow(opt%INFLOW_IS_VOL, numdays, opt%DAILY_SW)
     write(*,'(a15, i3,a13,i2,a18,i2)')'Stress Period: ',im,'   Month ID: ',month,'   Length (days): ', numdays
     write(800,'(a15, i3,a13,i2,a18,i2)')'Stress Period: ',im,'   Month ID: ',month,'   Length (days): ', numdays
-    
-    read(220,*) drain_flow(im)                       ! Read drain flow into array         
+       
     do jday=1, numdays                              ! Loop over days in each month
       simday = simday + 1
       if (jday==1) monthly%ET_active = 0            ! Set ET counter to 0 at the beginning of the month. Used for turning ET on and off in MODFLOW so it is not double counted.    
