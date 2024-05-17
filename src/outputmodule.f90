@@ -37,7 +37,7 @@ MODULE SWBM_output
     open(unit=900, file='Recharge_Total.dat', status = 'replace')   
     write(900,*)'Total_Recharge_m^3/day  Total_Recharge_m^3'            
     open(unit=84, file=trim(model_name)//'.rch', Access = 'append', status='replace')                                                  
-    open(unit=90, file='monthly_effective_precip_linear.dat', status = 'replace')              
+    open(unit=90, file='monthly_effective_precip_linear.dat', status = 'replace')
     write(90,*)'Monthly precip applied to each field normalized to the field area (m)'
     write(90,'(a14,a1,9999a14)')' Stress_Period',' ', header_text
     open(unit=91, file='monthly_GW_pumping_linear.dat', status = 'replace')              

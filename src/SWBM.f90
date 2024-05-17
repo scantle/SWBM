@@ -18,16 +18,19 @@ PROGRAM SWBM
 ! area       : 
 ! watersource: 
 ! whc        : 
-
+  use m_global
   USE define_fields
   USE irrigation
   USE SWBM_output
   USE ditch_module
+  USE m_options, only: t_options
+  USE m_read_main_input, only: read_main_input
+  USE m_file_io, only: get_command_args
   
   IMPLICIT NONE
 
-  INTEGER :: nmonths, numdays, WY, month, jday, i, im, nrows, ncols, ncmds, dummy, WYstart, simday, total_days, loopdays
-  INTEGER :: n_wel_param, num_daily_out, unit_num, nSFR_inflow_segs!, num_MAR_fields
+  INTEGER :: numdays, WY, month, jday, i, im, ncmds, dummy, simday, total_days, loopdays
+  INTEGER :: n_wel_param, num_daily_out, unit_num  !, num_MAR_fields
   INTEGER :: abs_irr_month, abs_irr_day
   INTEGER, ALLOCATABLE, DIMENSION(:,:) :: rch_zones, ET_Zone_Cells
   INTEGER, ALLOCATABLE, DIMENSION(:)   :: ip_daily_out, ndays, SFR_inflow_segs!, MAR_fields
@@ -37,13 +40,28 @@ PROGRAM SWBM
   REAL :: start, finish
   CHARACTER(10) :: SFR_Template, suffix, date_text ! , scenario
   !CHARACTER(10) :: recharge_scenario, flow_lim_scenario, nat_veg_scenario
-  CHARACTER(20) :: model_name, text_dummy
-  CHARACTER(30) :: filename, ditch_file!, wel_file
+  CHARACTER(20) :: text_dummy
+  CHARACTER(30) :: filename !, wel_file
   CHARACTER(400) :: cmd
   CHARACTER(50), ALLOCATABLE, DIMENSION(:) :: daily_out_name
   INTEGER, DIMENSION(31) :: ET_Active
-  LOGICAL :: MAR_active, ILR_active, daily_out_flag, inflow_is_vol, ag_wells_specified, using_neighbor_irr_rule, using_abs_irr_date, daily_sw
+  !LOGICAL :: MAR_active, ILR_active, daily_out_flag, inflow_is_vol, ag_wells_specified, using_neighbor_irr_rule, using_abs_irr_date, daily_sw
+  LOGICAL :: daily_out_flag, ag_wells_specified
   REAL :: eff_precip
+  
+  ! New variables
+  ! Globals
+  character(100)    :: main_input_file  ! Main input file
+  type(t_options)   :: opt              ! Options object with default values to be overwritten
+  integer           :: log_unit         ! Unit the logfile is opened on
+  
+  ! Initialization
+  call init_globals()
+  call opt%initialize()
+  call initialize_irr_ditch()
+  
+  ! Get command line arguments, returns main input file:
+  call get_command_args(main_input_file)
  
   CALL cpu_time(start)
   open(unit=10, file = 'system_commands.txt', status = 'old')
@@ -54,45 +72,20 @@ PROGRAM SWBM
   enddo
   close(10)
   
-  ! LS Initialize Irrigation Ditch Module
-  call initialize_irr_ditch()
-  
-  open(unit=800, file='SWBM.log')                         ! Open record file for screen output
+  log_unit = 800    ! TODO replace all instances of 800
+  open(log_unit, file='SWBM.log')                         ! Open record file for screen output
   eff_precip = 0.
   Total_Ref_ET = 0.
-  open(unit=10, file='general_inputs.txt', status='old')
-  read(10, *) model_name, WYstart, npoly, nlandcover, nAgWells, nMuniWells, nSubws
-  read(10, *) inflow_is_vol, daily_sw, nSFR_inflow_segs, nmonths, nrows, ncols
-  read(10, *) RD_Mult, SFR_Template
-  read(10, *) using_neighbor_irr_rule ! Neighbor-irrigating rule: Do farmers look to neighbor behavior for irrigation onset [TRUE] or only own field's soil moisture [FALSE]
-  read(10, *) using_abs_irr_date
-  if (using_abs_irr_date) then  ! Go back one line and re-read for values
-    backspace(10)
-    read(10, *) using_abs_irr_date , abs_irr_month, abs_irr_day
-  else  ! Sanitize for safety
-    abs_irr_month = 999
-    abs_irr_day   = 999
-  end if
-  !LS Get Irrigation ditch input file
-  read(10, *) ditch_file
-  close (10)
-  print*, SFR_Template
-  if (trim(SFR_Template)/='UCODE' .and. trim(SFR_Template)/='PEST') then 
-    	write(*,*)'Invalid Template File Format Variable in general_inputs.txt'
-    	write(800,*)'Invalid Template File Format Variable in general_inputs.txt'
-    	CALL EXIT
-  endif
-
-  ! Scenario selection process goes here, potentially, if necessary
-  ! Print scenario selections to screen and log
+  
+  ! Read Main input file
+  call read_main_input(main_input_file, opt)
 
   SFR_Template = TRIM(SFR_Template)
-  write(*,'(A27, A6)') 'SFR Template File Format = ',SFR_Template
-  write(800,'(A27, A6)') 'SFR Template File Format = ',SFR_Template
   write(*,'(A7,I6,A14,I4,A12,I5,A14,I5,A12,I3,A10,I5)') "npoly =", npoly, "nlandcover =", nlandcover, "nAgWells =", nAgWells, &
   "nMuniWells =", nMuniWells, "nSubws =", nSubws, "nmonths =", nmonths
-  write(800,'(A7,I6,A14,I4,A12,I5,A14,I5,A12,I3,A10,I5)') "npoly =", npoly, "nlandcover =", nlandcover, "nAgWells =", nAgWells, &
+  write(log_unit,'(A7,I6,A14,I4,A12,I5,A14,I5,A12,I3,A10,I5)') "npoly =", npoly, "nlandcover =", nlandcover, "nAgWells =", nAgWells, &
   "nMuniWells =", nMuniWells, "nSubws =", nSubws, "nmonths =", nmonths
+  call opt%write_options_to_log(log_unit)
   ! [NEED TO UPDATE CODE FOR MNW2 PACKAGE] open (unit=536, file="MNW2_template.txt", status="old")     
   ! [NEED TO UPDATE CODE FOR MNW2 PACKAGE] read(536,*) ! Read heading line into nothing
   ! [NEED TO UPDATE CODE FOR MNW2 PACKAGE] read(536,*)param_dummy,n_wel_param  ! read in number of well parameters (for printing later)
@@ -130,28 +123,14 @@ PROGRAM SWBM
   CALL read_landcover_table(nlandcover)
   
   !LS Read in irrigation ditch
-  if (trim(ditch_file) /= 'NONE') then
-    call read_irr_ditch_input_file(ditch_file, 10)
+  if (trim('irr_ditch.txt') /= "") then
+    call read_irr_ditch_input_file('irr_ditch.txt', 10)
   end if
 
   CALL readpoly(npoly, nrows, ncols, rch_zones)    ! Read in field info
   CALL initialize_wells(npoly, nAgWells, nMuniWells)                       ! Read in Ag well info
   open(unit=82, file = 'polygon_landcover_ids.txt', status = 'old')
   read(82,*)  ! read header into nothing
-
-  !MAR_active = .false. ! Need to get rid of this MAR_active artifact - mar depths gets read as an input file now
- !if (MAR_active) then
-!    open(unit=10,file='MAR_Fields.txt',status='old')      ! Read in MAR recharge matrix
-!    read(10,*) num_MAR_fields, MAR_vol
-!    ALLOCATE(MAR_fields(num_MAR_fields))                  ! Array of MAR field polygon IDs
-!    ALLOCATE(max_MAR_field_rate(num_MAR_fields))          ! Array of maximum infiltration rate for MAR fields (1/10th lowest SSURGO value)
- !   ALLOCATE(moisture_save(npoly))                        ! Array of soil-swc needed to recalculate recharge for MAR fields
- !   moisture_save = 0.                                    ! Initialize array
-!    do i=1, num_MAR_fields
-!      read(10,*)MAR_fields(i), max_MAR_field_rate(i)
-!    enddo
-!    close(10)
-!  endif
 
   ! Input files specifying field-by-field, 1 per stress period values
   open(unit=86, file = 'MAR_depth.txt', status = 'old')
@@ -194,7 +173,7 @@ PROGRAM SWBM
   WY = WYstart   ! water year
   do im=1, nmonths                ! Loop over each month
     numdays = ndays(im)        ! Number of days in the current month
-      if (daily_sw) loopdays = numdays  ! needed for reading daily values, when doing daily sw calcs
+      if (opt%DAILY_SW) loopdays = numdays  ! needed for reading daily values, when doing daily sw calcs
     read(82,*) date_text, fields(:)%landcover_id           ! read in landuse type (by field, for each month)
     !write(*,*) fields(1)%landcover_id
     read(86,*) date_text, fields(:)%mar_depth     ! read in monthly MAR application depths (not driven by irrigation demand) (by field, for each month)
@@ -212,7 +191,7 @@ PROGRAM SWBM
     endif
     Total_Ref_ET = 0.          ! Reset monthly Average ET
     CALL zero_month                               ! Zero out monthly accumulated volume
-    CALL read_monthly_stream_inflow(inflow_is_vol, numdays, daily_sw)
+    CALL read_monthly_stream_inflow(opt%INFLOW_IS_VOL, numdays, opt%DAILY_SW)
     write(*,'(a15, i3,a13,i2,a18,i2)')'Stress Period: ',im,'   Month ID: ',month,'   Length (days): ', numdays
     write(800,'(a15, i3,a13,i2,a18,i2)')'Stress Period: ',im,'   Month ID: ',month,'   Length (days): ', numdays
     
@@ -238,16 +217,15 @@ PROGRAM SWBM
       daily%pET=ETo * crops(fields%landcover_id)%daily_kc * crops(fields%landcover_id)%kc_mult                        ! Set ET to current value for the day
       
       if(irrigating .eqv. .false.) then  ! if not irrigating yet, check number of fields irrigating
-          if(sum(fields%irr_flag)>=250 .and. using_neighbor_irr_rule .eqv. .TRUE.) then  ! Under the neighbor-irrigating rule,
+          if(sum(fields%irr_flag)>=opt%NEIGHBOR_RULE) then  ! Under the neighbor-irrigating rule,
             irrigating = .true.  ! if 20% of the fields are irrigating (by number, not area; 1251 total irrigated fields), set logical to true
             write(*,'(A3,I4,A27,I2,A5,I2)') "in ", WY, ", irrigating started month ", month, " day " , jday
             !write(*,*) " "
         endif
       endif
       
-      if (using_abs_irr_date) then ! If the abs_irr_date exists... check to see if we've hit that date
-        if (month==abs_irr_month.and.jday>=abs_irr_day) irrigating = .TRUE.
-      end if
+      ! Check to see if we've hit the absolute irrigating date (Default is (999,999)
+      if (month==opt%ABSOLUTE_IRR_DATE(1).and.jday>=opt%ABSOLUTE_IRR_DATE(2)) irrigating = .TRUE.
 
       do ip=1, npoly
         if (daily(ip)%effprecip < (0.2*ETo)) daily(ip)%effprecip = 0  ! if precip is less than 20% of ET, assume precip is lost as evaporating dew and 0 precip inflitrates to soil zone
@@ -268,7 +246,7 @@ PROGRAM SWBM
       CALL monthly_SUM                                                            ! add daily value to monthly total (e.g., monthly%tot_irr = monthly%tot_irr + daily%tot_irr)
       CALL annual_SUM                                                             ! add daily value to annual total (e.g., yearly%tot_irr = yearly%tot_irr + daily%tot_irr)
       if (jday==numdays) then                                         
-      	CALL SFR_streamflow(npoly, numdays, nSubws, nSegs, nSFR_inflow_segs, month, daily_sw)      ! Convert remaining surface water and runoff to SFR inflows at end of the month	
+      	CALL SFR_streamflow(npoly, numdays, nSubws, nSegs, nSFR_inflow_segs, month, opt%DAILY_SW)      ! Convert remaining surface water and runoff to SFR inflows at end of the month	
         ann_spec_ag_vol = ann_spec_ag_vol + SUM(ag_wells%specified_volume)	      ! add monthly specified ag pumping volume to annual total
         ann_spec_muni_vol = ann_spec_muni_vol + SUM(muni_wells%specified_volume)  ! add monthly specified volume to annual total
       endif
@@ -279,9 +257,9 @@ PROGRAM SWBM
     CALL write_MODFLOW_RCH(im,numdays,nrows,ncols,rch_zones)
     CALL write_MODFLOW_ETS(im,numdays,nrows,ncols,rch_zones,Total_Ref_ET,ET_Zone_Cells, ET_Cells_ex_depth, npoly)
     CALL print_monthly_output(im, nlandcover, nSubws)
-    CALL write_MODFLOW_SFR(im, month, nSegs, model_name, total_days, daily_sw)
-    CALL write_MODFLOW_SFR_tabfiles(im, numdays, simday, nSegs, daily_sw)
-    CALL write_UCODE_SFR_template(im, month, nSegs, model_name, total_days, daily_sw)   ! Write JTF file for UCODE 
+    CALL write_MODFLOW_SFR(im, month, nSegs, model_name, total_days, opt%DAILY_SW)
+    CALL write_MODFLOW_SFR_tabfiles(im, numdays, simday, nSegs, opt%DAILY_SW)
+    CALL write_UCODE_SFR_template(im, month, nSegs, model_name, total_days, opt%DAILY_SW)   ! Write JTF file for UCODE 
     CALL write_MODFLOW_WEL(im, month, nAgWells, n_wel_param, model_name)       
     ! CALL write_MODFLOW_MNW2(im, nAgWells, nMuniWells, ag_wells_specified)          
     if (month==9) then

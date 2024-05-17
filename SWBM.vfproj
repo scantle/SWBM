@@ -54,10 +54,20 @@
 		<Filter Name="Header Files" Filter="fi;fd;h;inc"/>
 		<Filter Name="Resource Files" Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"/>
 		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
+		<Filter Name="File IO">
+		<File RelativePath=".\src\FileIO.f90"/>
+		<File RelativePath=".\src\outputmodule.f90"/>
+		<File RelativePath=".\read_main_input.f90"/></Filter>
+		<Filter Name="Data Structures">
+		<File RelativePath=".\src\Lists.f90"/>
+		<File RelativePath=".\options.f90"/></Filter>
+		<Filter Name="Tools">
+		<File RelativePath=".\src\ErrorHandler.f90"/>
+		<File RelativePath=".\src\time.f90"/></Filter>
 		<File RelativePath=".\src\define_fields.f90"/>
+		<File RelativePath=".\global.f90"/>
 		<File RelativePath=".\src\irr_ditch.f90"/>
 		<File RelativePath=".\src\irrigation.f90"/>
-		<File RelativePath=".\src\outputmodule.f90"/>
 		<File RelativePath=".\src\SWBM.f90"/></Filter>
 	</Files>
 	<Globals/>
