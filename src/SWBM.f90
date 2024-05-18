@@ -64,13 +64,6 @@ PROGRAM SWBM
   call get_command_args(main_input_file)
  
   CALL cpu_time(start)
-  open(unit=10, file = 'system_commands.txt', status = 'old')
-  read(10,*) ncmds
-  do i=1, ncmds
-  	read(10, '(A400)') cmd
-  	CALL execute_command_line(trim(cmd))
-  enddo
-  close(10)
   
   log_unit = 800    ! TODO replace all instances of 800
   open(log_unit, file='SWBM.log')                         ! Open log file to mirror important screen output in file
