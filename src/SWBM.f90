@@ -24,29 +24,28 @@ PROGRAM SWBM
   USE SWBM_output
   USE ditch_module
   USE m_options, only: t_options
-  USE m_read_main_input, only: read_main_input
-  USE m_file_io, only: get_command_args
+  USE m_read_main_input, only: read_main_input, read_array_file
+  USE m_file_io, only: get_command_args,io_initialize
   
   IMPLICIT NONE
 
   INTEGER :: numdays, WY, month, jday, i, im, ncmds, dummy, simday, total_days, loopdays
-  INTEGER :: n_wel_param, num_daily_out, unit_num  !, num_MAR_fields
+  INTEGER :: n_wel_param, unit_num  !, num_MAR_fields
   INTEGER :: abs_irr_month, abs_irr_day
   INTEGER, ALLOCATABLE, DIMENSION(:,:) :: rch_zones, ET_Zone_Cells
-  INTEGER, ALLOCATABLE, DIMENSION(:)   :: ip_daily_out, ndays, SFR_inflow_segs!, MAR_fields
+  INTEGER, ALLOCATABLE, DIMENSION(:)   :: ndays, SFR_inflow_segs!, MAR_fields
   REAL, ALLOCATABLE, DIMENSION(:,:) :: ET_Cells_ex_depth
   REAL :: stn_precip, Total_Ref_ET, MAR_vol
   REAL, ALLOCATABLE, DIMENSION(:)  :: max_MAR_field_rate!, moisture_save
   REAL :: start, finish
-  CHARACTER(10) :: SFR_Template, suffix, date_text ! , scenario
+  CHARACTER(10) :: suffix, date_text ! , scenario
   !CHARACTER(10) :: recharge_scenario, flow_lim_scenario, nat_veg_scenario
   CHARACTER(20) :: text_dummy
   CHARACTER(30) :: filename !, wel_file
   CHARACTER(400) :: cmd
-  CHARACTER(50), ALLOCATABLE, DIMENSION(:) :: daily_out_name
   INTEGER, DIMENSION(31) :: ET_Active
   !LOGICAL :: MAR_active, ILR_active, daily_out_flag, inflow_is_vol, ag_wells_specified, using_neighbor_irr_rule, using_abs_irr_date, daily_sw
-  LOGICAL :: daily_out_flag, ag_wells_specified
+  LOGICAL :: ag_wells_specified
   REAL :: eff_precip
   
   ! New variables
@@ -57,6 +56,7 @@ PROGRAM SWBM
   
   ! Initialization
   call init_globals()
+  call io_initialize()
   call opt%initialize()
   call initialize_irr_ditch()
   
@@ -73,23 +73,24 @@ PROGRAM SWBM
   close(10)
   
   log_unit = 800    ! TODO replace all instances of 800
-  open(log_unit, file='SWBM.log')                         ! Open record file for screen output
+  open(log_unit, file='SWBM.log')                         ! Open log file to mirror important screen output in file
   eff_precip = 0.
   Total_Ref_ET = 0.
   
   ! Read Main input file
   call read_main_input(main_input_file, opt)
 
-  SFR_Template = TRIM(SFR_Template)
+  ! Write info to log
   write(*,'(A7,I6,A14,I4,A12,I5,A14,I5,A12,I3,A10,I5)') "npoly =", npoly, "nlandcover =", nlandcover, "nAgWells =", nAgWells, &
   "nMuniWells =", nMuniWells, "nSubws =", nSubws, "nmonths =", nmonths
   write(log_unit,'(A7,I6,A14,I4,A12,I5,A14,I5,A12,I3,A10,I5)') "npoly =", npoly, "nlandcover =", nlandcover, "nAgWells =", nAgWells, &
   "nMuniWells =", nMuniWells, "nSubws =", nSubws, "nmonths =", nmonths
   call opt%write_options_to_log(log_unit)
-  ! [NEED TO UPDATE CODE FOR MNW2 PACKAGE] open (unit=536, file="MNW2_template.txt", status="old")     
-  ! [NEED TO UPDATE CODE FOR MNW2 PACKAGE] read(536,*) ! Read heading line into nothing
-  ! [NEED TO UPDATE CODE FOR MNW2 PACKAGE] read(536,*)param_dummy,n_wel_param  ! read in number of well parameters (for printing later)
-  ! [NEED TO UPDATE CODE FOR MNW2 PACKAGE] close(536)
+
+  ! Read in zone/property related files before time loop
+  ALLOCATE(rch_zones(nrows,ncols))
+  ALLOCATE(ET_Zone_Cells(nrows,ncols))
+  ALLOCATE(ET_Cells_ex_depth(nrows,ncols))
   filename = trim(model_name) // '.wel'
   open (unit=536, file= filename, status="old")     
   read(536,*) ! Read heading line into nothing
@@ -105,61 +106,45 @@ PROGRAM SWBM
   enddo
   close(10)
   
-  ALLOCATE(rch_zones(nrows,ncols))
-  ALLOCATE(ET_Zone_Cells(nrows,ncols))
-  ALLOCATE(ET_Cells_ex_depth(nrows,ncols))
+  ! Read in MODFLOW recharge zone matrix
+  rch_zones = 0
+  call read_array_file(recharge_zones_file, rch_zones, nrows, ncols)
   
-  open(unit=218,file='ET_Zone_Cells.txt',status='old')      ! Read in 1-0 grid of cells with MODFLOW ET-from-groundwater zones
-  read(218,*) ET_Zone_Cells 
-  open(unit=219,file='ET_Cells_Extinction_Depth.txt',status='old')      ! Read in extinction depths for MODFLOW ET-from-groundwater zones
-  read(219,*) ET_Cells_ex_depth 
-  open(unit=10,file='recharge_zones.txt',status='old')      ! Read in MODFLOW recharge zone matrix
-  read(10,*) rch_zones
-  close(10)
-  open(unit=85, file = 'SFR_subws_flow_partitioning.txt', status = 'old')
-  read(85,*)  ! read header into nothing
+  ! Read in extinction depths for MODFLOW ET-from-groundwater zones
+  ET_Cells_ex_depth = 0
+  call read_array_file(et_ext_depth_file, ET_Cells_ex_depth, nrows, ncols)
+  
+  ! Read in 1-0 grid of cells with MODFLOW ET-from-groundwater zones (if passed, else assume 0s)
+  ET_Zone_Cells = 0
+  if (trim(et_zones_file) /= "") call read_array_file(et_zones_file, ET_Zone_Cells, nrows, ncols)
+  
   CALL initialize_streams(nSubws, nSFR_inflow_segs)
   CALL read_landcover_table(nlandcover)
   
   !LS Read in irrigation ditch
-  if (trim('irr_ditch.txt') /= "") then
-    call read_irr_ditch_input_file('irr_ditch.txt', 10)
-  end if
+  if (trim(ditch_file) /= "") call read_irr_ditch_input_file(ditch_file, 10)
 
-  CALL readpoly(npoly, nrows, ncols, rch_zones)    ! Read in field info
-  CALL initialize_wells(npoly, nAgWells, nMuniWells)                       ! Read in Ag well info
-  open(unit=82, file = 'polygon_landcover_ids.txt', status = 'old')
+  CALL readpoly(npoly, nrows, ncols, rch_zones)                  ! Read in field info
+  CALL initialize_wells(npoly, nAgWells, nMuniWells)             ! Read in Ag well info
+  open(unit=82, file = poly_landcover_file, status = 'old')
   read(82,*)  ! read header into nothing
 
   ! Input files specifying field-by-field, 1 per stress period values
-  open(unit=86, file = 'MAR_depth.txt', status = 'old')
+  open(unit=86, file = MAR_depth_file, status = 'old')
   read(86,*)  ! read header into nothing
-  open(unit=87, file = 'curtailment_fractions.txt', status = 'old')
+  open(unit=87, file = curtail_frac_file, status = 'old')
   read(87,*)  ! read header into nothing
   ! Input files specifying 1 value per stress period
-  open(unit=887,file='precip.txt', status = 'old')
+  open(unit=887,file=precip_file, status = 'old')
   !read(887,*)  ! read header into nothing                   
-  open(unit=88,file='ref_et.txt', status = 'old')
+  open(unit=88,file=et_file, status = 'old')
   read(88,*)  ! read header into nothing
-  open(unit=79, file='kc_values.txt', status = 'old')   
+  open(unit=79, file=kc_frac_file, status = 'old')   
   read(79,*)  ! read header into nothing
+  open(unit=85, file = sfr_partition_file, status = 'old')
+  read(85,*)  ! read header into nothing
 
-  open(unit=599, file = 'print_daily.txt', status = 'old')
-  read(599,*) num_daily_out, daily_out_flag
-  ALLOCATE(ip_daily_out(num_daily_out))
-  ALLOCATE(daily_out_name(num_daily_out))
-  if (daily_out_flag) then
-  	 do i=1, num_daily_out
-  	 	 unit_num =  599 + i 
-  	   read(599,*)ip_daily_out(i), daily_out_name(i)
-  	   daily_out_name(i) = trim(daily_out_name(i)) // '_daily_out.dat'
-  	   open(unit=unit_num, file=daily_out_name(i))
-  	   write(unit_num,'(2a)')'field_id  effective_precip  streamflow  SW_irrig  GW_irr  total_irr  rch  run  swc  pET',&
-  	                    '  aET  deficiency  residual  field_capacity  subws_ID  SWBM_LU  landcover_id'    
-    enddo
-  endif
-
-  CALL output_files(model_name, daily_out_flag)
+  CALL output_files(model_name)
   fields%irr_flag = 0          ! Initialize irrigating status flag array
   month = 10                   ! Initialize month variable to start in October
   simday = 0                   ! Counter of day of simulation
@@ -170,7 +155,7 @@ PROGRAM SWBM
   WY = WYstart   ! water year
   do im=1, nmonths                ! Loop over each month
     numdays = ndays(im)        ! Number of days in the current month
-      if (opt%DAILY_SW) loopdays = numdays  ! needed for reading daily values, when doing daily sw calcs
+    if (opt%DAILY_SW) loopdays = numdays  ! needed for reading daily values, when doing daily sw calcs
     read(82,*) date_text, fields(:)%landcover_id           ! read in landuse type (by field, for each month)
     !write(*,*) fields(1)%landcover_id
     read(86,*) date_text, fields(:)%mar_depth     ! read in monthly MAR application depths (not driven by irrigation demand) (by field, for each month)
@@ -237,8 +222,8 @@ PROGRAM SWBM
  	        CALL IRR2CP(WY)                          ! Convert fields to center pivot irrigation
 	      endif
        enddo              
-      if (daily_out_flag) CALL daily_out(num_daily_out,ip_daily_out)              ! Print Daily Output for Selected Fields
-      CALL groundwater_pumping(jday, nAgWells, npoly, numdays, daily_out_flag, ag_wells_specified)      ! Assign gw_irr to wells
+      CALL daily_out()                                                            ! Print Daily Output for Selected Fields
+      CALL groundwater_pumping(jday, nAgWells, npoly, numdays, ag_wells_specified)      ! Assign gw_irr to wells
       CALL monthly_SUM                                                            ! add daily value to monthly total (e.g., monthly%tot_irr = monthly%tot_irr + daily%tot_irr)
       CALL annual_SUM                                                             ! add daily value to annual total (e.g., yearly%tot_irr = yearly%tot_irr + daily%tot_irr)
       if (jday==numdays) then                                         
@@ -250,13 +235,16 @@ PROGRAM SWBM
 
     CALL convert_length_to_volume
     CALL monthly_out_by_field(im)
-    CALL write_MODFLOW_RCH(im,numdays,nrows,ncols,rch_zones)
-    CALL write_MODFLOW_ETS(im,numdays,nrows,ncols,rch_zones,Total_Ref_ET,ET_Zone_Cells, ET_Cells_ex_depth, npoly)
     CALL print_monthly_output(im, nlandcover, nSubws)
-    CALL write_MODFLOW_SFR(im, month, nSegs, model_name, total_days, opt%DAILY_SW)
-    CALL write_MODFLOW_SFR_tabfiles(im, numdays, simday, nSegs, opt%DAILY_SW)
-    CALL write_UCODE_SFR_template(im, month, nSegs, model_name, total_days, opt%DAILY_SW)   ! Write JTF file for UCODE 
-    CALL write_MODFLOW_WEL(im, month, nAgWells, n_wel_param, model_name)       
+    if (opt%write_modflow) then
+      CALL write_MODFLOW_RCH(im,numdays,nrows,ncols,rch_zones)
+      CALL write_MODFLOW_ETS(im,numdays,nrows,ncols,rch_zones,Total_Ref_ET,ET_Zone_Cells, ET_Cells_ex_depth, npoly)
+      CALL write_MODFLOW_SFR(im, month, nSegs, model_name, total_days, opt%DAILY_SW)
+      CALL write_MODFLOW_SFR_tabfiles(im, numdays, simday, nSegs, opt%DAILY_SW)
+      CALL write_MODFLOW_WEL(im, month, nAgWells, n_wel_param, model_name)       
+    end if
+    if (opt%write_ucode) CALL write_UCODE_SFR_template(im, month, nSegs, model_name, total_days, opt%DAILY_SW)   ! Write JTF file for UCODE
+    if (opt%write_pest) CALL write_PEST_SFR_template(im, month, nSegs, model_name, total_days, opt%DAILY_SW)   ! Write JTF file for UCODE
     ! CALL write_MODFLOW_MNW2(im, nAgWells, nMuniWells, ag_wells_specified)          
     if (month==9) then
     CALL print_annual(WY, ag_wells_specified)        ! print annual values at the end of September

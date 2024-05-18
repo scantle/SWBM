@@ -6,6 +6,13 @@ module m_read_main_input
 ! Module variables
   type(t_file_reader), pointer :: reader
   logical                      :: has_necessary_blocks(4) ! Discretization, Opt, Parameters, Inputs
+  
+  ! Interfaces
+  interface read_array_file
+    module procedure read_int_array_file
+    module procedure read_real_array_file
+  end interface
+  
 !-------------------------------------------------------------------------------------------------!
   contains
 !-------------------------------------------------------------------------------------------------!
@@ -26,6 +33,11 @@ module m_read_main_input
       call block_redirect(opt, id)
     end do
     call close_file(reader)
+    
+    if (has_necessary_blocks(1)==.false.) call error_handler(1,reader%file,"Missing Discretization Block!")
+    if (has_necessary_blocks(2)==.false.) call error_handler(1,reader%file,"Missing Options Block!")
+    if (has_necessary_blocks(3)==.false.) call error_handler(1,reader%file,"Missing Parameters Block!")
+    if (has_necessary_blocks(4)==.false.) call error_handler(1,reader%file,"Missing Input_Files Block!")
   
   end subroutine read_main_input
 !-------------------------------------------------------------------------------------------------!
@@ -41,12 +53,18 @@ module m_read_main_input
       case("OPTIONS")
         ! This is the only block we let read it's own entries and set it's own read tracker (has_opt)
         call opt%read_options(reader)
+        has_necessary_blocks(2) = .true.
       case("DISCRETIZATION")
         call read_DISCRETIZATION_block(reader)
+        has_necessary_blocks(1) = .true.
       case("PARAMETERS")
         call read_PARAMETERS_block(reader)
-      case("INPUTS")
-      case("PRINT DAILY")
+        has_necessary_blocks(3) = .true.
+      case("INPUT_FILES")
+        call read_INPUT_FILES_block(reader)
+        has_necessary_blocks(4) = .true.
+      case("PRINT_DAILY")
+        call read_PRINT_DAILY_block(reader)
       case ("END")
         ! Do nothing - errant line? Block reader ended early?
       case DEFAULT
@@ -160,10 +178,137 @@ module m_read_main_input
     end do
     ! Really simple input enforcement
     if (any(has_necessary_items==.false.)) then
-      call error_handler(1,reader%file,"Missing items in Parameter Block")
+      call error_handler(1,reader%file,"Missing required items in Parameter Block")
     end if
     
     end subroutine read_PARAMETERS_block
+
+!-------------------------------------------------------------------------------------------------!
+  subroutine read_INPUT_FILES_block(reader)
+    use m_global
+    implicit none
+    type(t_file_reader), pointer    :: reader
+    logical                         :: has_necessary_items(7) = .false.
     
+    ! Standard file reader variables
+    integer                    :: status, length
+    character(30)              :: id, value
+    type(t_vstringlist)        :: strings
+    
+    ! Loop until end of block or end of file
+    do
+      call reader%next_block_item(status, id, strings, length)
+      if (status /= 0) exit  ! exit if end of block or end of file
+      select case(trim(id))
+        case("PRECIP")
+          call item2char(strings, 2, precip_file)
+          has_necessary_items(1) = .true.
+        case("ET")
+          call item2char(strings, 2, et_file)
+          has_necessary_items(2) = .true.
+        case("ET_EXT_DEPTH")
+          call item2char(strings, 2, et_ext_depth_file)
+          has_necessary_items(3) = .true.
+        case("RECHARGE_ZONES")
+          call item2char(strings, 2, recharge_zones_file)
+          has_necessary_items(4) = .true.
+        case("KC_FRAC")
+          call item2char(strings, 2, kc_frac_file)
+          has_necessary_items(5) = .true.
+        case("SFR_PARTITION")
+          call item2char(strings, 2, sfr_partition_file)
+          has_necessary_items(6) = .true.
+        case("POLY_LANDCOVER")
+          call item2char(strings, 2, poly_landcover_file)
+          has_necessary_items(7) = .true.
+        case("IRR_DITCH")
+          call item2char(strings, 2, ditch_file)
+        case("ET_ZONE_CELLS")
+          call item2char(strings, 2, et_zones_file)
+        case("MAR_DEPTH")
+          call item2char(strings, 2, MAR_depth_file)
+        case("CURTAIL_FRAC")
+          call item2char(strings, 2, curtail_frac_file)
+        case DEFAULT
+          call error_handler(1,reader%file,"Unknown Parameter: " // trim(id))
+      end select
+    end do
+    ! Really simple input enforcement
+    if (any(has_necessary_items==.false.)) then
+      call error_handler(1,reader%file,"Missing required items in Input_Files Block")
+    end if
+  
+  end subroutine read_INPUT_FILES_block
+!-------------------------------------------------------------------------------------------------!
+  
+  subroutine read_PRINT_DAILY_block(reader)
+    use m_global, only: n_daily_out, daily_out_idx, daily_out_nms
+    implicit none
+    type(t_file_reader), pointer :: reader
+    integer                      :: i
+    
+    ! Standard file reader variables
+    integer                    :: status, length
+    character(30)              :: id, value
+    type(t_vstringlist)        :: strings
+    
+    ! How many items?
+    n_daily_out = reader%get_block_len()
+    allocate(daily_out_idx(n_daily_out), daily_out_nms(n_daily_out))
+     
+    ! Read items
+    do i=1, n_daily_out
+      call reader%next_block_item(status, id, strings, length)
+      daily_out_idx(i) = item2int(strings, 1)
+      call item2char(strings, 2, daily_out_nms(i))
+    end do
+    
+    ! Skip to get past "END"
+    call reader%skip(1)
+  
+  end subroutine read_PRINT_DAILY_block
+  
+!-------------------------------------------------------------------------------------------------!
+  subroutine read_int_array_file(filename, array, rows, cols, has_header)
+    character(*), intent(in)     :: filename
+    integer, intent(in)          :: rows, cols
+    integer, intent(inout)       :: array(rows, cols)   ! Typical order
+    logical, intent(in),optional :: has_header
+    
+    reader => open_file_reader(filename)
+    
+    ! Skip header
+    if (present(has_header)) then
+      if (has_header) call reader%skip(1)
+    end if
+    
+    ! Read array
+    read(reader%unit,*) array
+    
+    call close_file(reader)
+  
+  end subroutine read_int_array_file
+!-------------------------------------------------------------------------------------------------!
+  
+  subroutine read_real_array_file(filename, array, rows, cols, has_header)
+    character(*), intent(in)     :: filename
+    integer, intent(in)          :: rows, cols
+    real, intent(inout)          :: array(rows, cols)   ! Typical order
+    logical, intent(in),optional :: has_header
+    
+    reader => open_file_reader(filename)
+    
+    ! Skip header
+    if (present(has_header)) then
+      if (has_header) call reader%skip(1)
+    end if
+    
+    ! Read array
+    read(reader%unit,*) array
+    
+    call close_file(reader)
+  
+  end subroutine read_real_array_file
+  
 !-------------------------------------------------------------------------------------------------!
 end module m_read_main_input

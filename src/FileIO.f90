@@ -130,7 +130,7 @@ module m_file_io
     f%file = trim(file)
     
     open(f%unit, file=f%file, action='READ', STATUS='OLD', iostat=f%ioerr, iomsg=iomsg)
-    write(log_unit,'(3a)') 'Opening file ', trim(f%file), ' for reading.'
+    !write(log_unit,'(3a)') 'Opening file ', trim(f%file), ' for reading.'
     call f%iomsg_handler(iomsg)
     
     
@@ -151,7 +151,7 @@ module m_file_io
     f%file = trim(file)
     
     open(f%unit, file=f%file, action='WRITE', STATUS='REPLACE', iostat=f%ioerr, iomsg=iomsg)
-    if (log_unit > 0) write(log_unit,'(3a)') 'Opening file', trim(f%file), ' for writing.'
+    !if (log_unit > 0) write(log_unit,'(3a)') 'Opening file', trim(f%file), ' for writing.'
     call f%iomsg_handler(iomsg)
     
   end function open_file_writer
@@ -464,12 +464,11 @@ module m_file_io
   
 !-------------------------------------------------------------------------------------------------!
   
-    subroutine skip(this, nlines, eof)
+    subroutine skip(this, nlines)
     implicit none
     class(t_file_reader)              :: this
     integer,intent(in)                :: nlines
-    integer,intent(out)               :: eof
-    integer                           :: ierr, i
+    integer                           :: ierr, i, eof
 
     ! Get to the next line
     call this%read_to_next_line(eof)
