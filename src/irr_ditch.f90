@@ -37,7 +37,8 @@ module ditch_module
   !-----------------------------------------------------------------------------------------------!
 
   !-----------------------------------------------------------------------------------------------!
-  subroutine read_irr_ditch_input_file(filename, unit)
+  subroutine read_irr_ditch_input_file(filename)
+    use m_file_io, only: get_next_iunit, return_iunit
     implicit none
     !---------------------------------------------------------------------------------------------!
     ! Reads irrigation ditch input file, loading all needed ditch data
@@ -48,12 +49,13 @@ module ditch_module
     !---------------------------------------------------------------------------------------------!
       
     character(*), intent(in) :: filename
-    integer, intent(in)        :: unit
-    integer                    :: i, j, month, ierr
+    integer                    :: i, j, month, ierr, unit
     integer, allocatable       :: ls(:), rs(:)
     real                       :: factor
     character(300)             :: line
     character(256)             :: cerr
+    
+    unit = get_next_iunit()
     
     open(unit, file=trim(filename), status='old', iostat=ierr, iomsg=cerr)
     if (ierr /= 0) then
@@ -116,6 +118,7 @@ module ditch_module
     end do
     
     close(unit)
+    call return_iunit(unit)
 
   end subroutine read_irr_ditch_input_file
   !-----------------------------------------------------------------------------------------------!
