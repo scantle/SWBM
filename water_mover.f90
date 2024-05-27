@@ -61,15 +61,15 @@ module water_mover
           ! Handle Move FROM
           select case(move_type(1,i))
             case(1) ! WELL
-              if (from_to(1,i) < 0 .or. from_to(1,i) > nAgWells) then
+              if ((from_to(1,i) > 0) .and. (from_to(1,i) <= nAgWells)) then
                 wel_rate(from_to(1,i)) = -1 * rate
               else
                 call item2char(strings, 2, temp)
                 call error_handler(1,reader%file,"Invalid from well id, check nAgWells. well id = "//temp)
               end if
             case(2) ! SFR
-              if (from_to(1,i) < 0 .or. from_to(1,i) > nsegs) then
-                wel_rate(from_to(1,i)) = -1 * rate
+              if (from_to(1,i) > 0 .and. from_to(1,i) <= nsegs) then
+                sfr_rate(from_to(1,i)) = -1 * rate
               else
                 call item2char(strings, 2, temp)
                 call error_handler(1,reader%file,"Invalid from segment id = "//temp)
@@ -81,21 +81,21 @@ module water_mover
           ! Handle Move TO
           select case(move_type(2,i))
             case(1) ! WELL
-              if (from_to(2,i) < 0 .or. from_to(2,i) > nAgWells) then
-                wel_rate(from_to(1,i)) = -1 * rate
+              if (from_to(2,i) > 0 .or. from_to(2,i) <= nAgWells) then
+                wel_rate(from_to(1,i)) = rate
               else
                 call item2char(strings, 4, temp)
                 call error_handler(1,reader%file,"Invalid from well id, check nAgWells. well id = "//temp)
               end if
             case(2) ! SFR
-              if (from_to(2,i) < 0 .or. from_to(2,i) > nsegs) then
-                wel_rate(from_to(2,i)) = rate
+              if (from_to(2,i) > 0 .or. from_to(2,i) <= nsegs) then
+                sfr_rate(from_to(2,i)) = rate
               else
                 call item2char(strings, 4, temp)
                 call error_handler(1,reader%file,"Invalid from segment id = "//temp)
               end if
             case(3) ! MAR
-              if (from_to(2,i) < 0 .or. from_to(2,i) > npoly) then
+              if (from_to(2,i) > 0 .or. from_to(2,i) <= npoly) then
                 mar_rate(from_to(2,i)) = rate
               else
                 call item2char(strings, 4, temp)

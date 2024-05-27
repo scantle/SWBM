@@ -229,6 +229,8 @@ module m_read_main_input
           call item2char(strings, 2, MAR_depth_file)
         case("CURTAIL_FRAC")
           call item2char(strings, 2, curtail_frac_file)
+        case("WATER_MOVER")
+          call item2char(strings, 2, water_mover_file)
         case DEFAULT
           call error_handler(1,reader%file,"Unknown Parameter: " // trim(id))
       end select

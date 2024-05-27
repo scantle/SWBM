@@ -24,6 +24,7 @@ PROGRAM SWBM
   USE SWBM_output
   USE ditch_module
   USE m_options, only: t_options
+  USE water_mover, only: read_water_mover_input_file
   USE m_read_main_input, only: read_main_input, read_array_file
   USE m_file_io, only: get_command_args,io_initialize
   
@@ -114,8 +115,9 @@ PROGRAM SWBM
   CALL initialize_streams(nSubws, nSFR_inflow_segs)
   CALL read_landcover_table(nlandcover)
   
-  !LS Read in irrigation ditch
+  !LS Read in irrigation ditch & water mover
   if (trim(ditch_file) /= "") call read_irr_ditch_input_file(ditch_file)
+  if (trim(water_mover_file) /= "") call read_water_mover_input_file(water_mover_file)
 
   CALL readpoly(npoly, nrows, ncols, rch_zones)                  ! Read in field info
   CALL initialize_wells(npoly, nAgWells, nMuniWells)             ! Read in Ag well info
@@ -167,6 +169,7 @@ PROGRAM SWBM
     Total_Ref_ET = 0.          ! Reset monthly Average ET
     CALL zero_month                               ! Zero out monthly accumulated volume
     CALL read_monthly_stream_inflow(opt%INFLOW_IS_VOL, numdays, opt%DAILY_SW)
+    !call water_mover_setup_month(numdays, opt%DAILY_SW)
     write(*,'(a15, i3,a13,i2,a18,i2)')'Stress Period: ',im,'   Month ID: ',month,'   Length (days): ', numdays
     write(800,'(a15, i3,a13,i2,a18,i2)')'Stress Period: ',im,'   Month ID: ',month,'   Length (days): ', numdays
        
@@ -214,7 +217,8 @@ PROGRAM SWBM
 		      irrigating = .false.
  	        CALL IRR2CP(WY)                          ! Convert fields to center pivot irrigation
 	      endif
-       enddo              
+      enddo           ! End of field/polygon loop
+      
       CALL daily_out()                                                            ! Print Daily Output for Selected Fields
       CALL groundwater_pumping(jday, nAgWells, npoly, numdays, ag_wells_specified)      ! Assign gw_irr to wells
       CALL monthly_SUM                                                            ! add daily value to monthly total (e.g., monthly%tot_irr = monthly%tot_irr + daily%tot_irr)

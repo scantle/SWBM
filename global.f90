@@ -24,6 +24,7 @@ module m_global
   character(100)   :: et_zones_file
   character(100)   :: MAR_depth_file
   character(100)   :: curtail_frac_file
+  character(100)   :: water_mover_file
   
   ! Output arrays
   integer,allocatable       :: daily_out_idx(:)
