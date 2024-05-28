@@ -333,9 +333,10 @@ MODULE SWBM_output
      
 !  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~	
      
-  SUBROUTINE groundwater_pumping(jday, nAgWells, npoly, numdays, ag_wells_specified)
-       
-     INTEGER, INTENT(IN) :: jday, nAgWells, npoly, numdays
+  SUBROUTINE groundwater_pumping(jday, nAgWells, npoly, numdays, im, ag_wells_specified)
+    use water_mover, only: water_mover_well
+    implicit none
+     INTEGER, INTENT(IN) :: jday, nAgWells, npoly, numdays, im
      LOGICAL, INTENT(IN) :: ag_wells_specified
      INTEGER :: i, well_idx
      
@@ -352,15 +353,17 @@ MODULE SWBM_output
      	 else 
      	   ag_wells(fields(i)%well_idx)%daily_vol =   daily(i)%gw_irr*fields(i)%area               ! assign daily gw_irr volume   
          ag_wells(fields(i)%well_idx)%monthly_vol = ag_wells(fields(i)%well_idx)%monthly_vol + &
-         ag_wells(fields(i)%well_idx)%daily_vol    ! Add daily volume to monthly counter
+                                                    ag_wells(fields(i)%well_idx)%daily_vol    ! Add daily volume to monthly counter
        endif
-     enddo      
+     enddo  
      
      write(530,'(200es20.8)') ag_wells%daily_vol
      
      if (jday==numdays) then
        ag_wells%specified_rate = ag_wells%specified_volume / numdays
        muni_wells%specified_rate = muni_wells%specified_volume / numdays
+       
+       call water_mover_well(im, numdays, ag_wells%monthly_vol)
        
        if (ag_wells_specified) then
          write(531,'(172es20.8)') ag_wells%specified_volume

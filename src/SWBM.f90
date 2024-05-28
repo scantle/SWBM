@@ -24,7 +24,7 @@ PROGRAM SWBM
   USE SWBM_output
   USE ditch_module
   USE m_options, only: t_options
-  USE water_mover, only: read_water_mover_input_file
+  USE water_mover, only: read_water_mover_input_file, water_mover_setup_month, water_mover_sfr
   USE m_read_main_input, only: read_main_input, read_array_file
   USE m_file_io, only: get_command_args,io_initialize
   
@@ -169,7 +169,7 @@ PROGRAM SWBM
     Total_Ref_ET = 0.          ! Reset monthly Average ET
     CALL zero_month                               ! Zero out monthly accumulated volume
     CALL read_monthly_stream_inflow(opt%INFLOW_IS_VOL, numdays, opt%DAILY_SW)
-    !call water_mover_setup_month(numdays, opt%DAILY_SW)
+    call water_mover_setup_month(im, numdays, opt%DAILY_SW)
     write(*,'(a15, i3,a13,i2,a18,i2)')'Stress Period: ',im,'   Month ID: ',month,'   Length (days): ', numdays
     write(800,'(a15, i3,a13,i2,a18,i2)')'Stress Period: ',im,'   Month ID: ',month,'   Length (days): ', numdays
        
@@ -220,11 +220,12 @@ PROGRAM SWBM
       enddo           ! End of field/polygon loop
       
       CALL daily_out()                                                            ! Print Daily Output for Selected Fields
-      CALL groundwater_pumping(jday, nAgWells, npoly, numdays, ag_wells_specified)      ! Assign gw_irr to wells
+      CALL groundwater_pumping(jday, nAgWells, npoly, numdays,im, ag_wells_specified)      ! Assign gw_irr to wells
       CALL monthly_SUM                                                            ! add daily value to monthly total (e.g., monthly%tot_irr = monthly%tot_irr + daily%tot_irr)
       CALL annual_SUM                                                             ! add daily value to annual total (e.g., yearly%tot_irr = yearly%tot_irr + daily%tot_irr)
       if (jday==numdays) then                                         
       	CALL SFR_streamflow(npoly, numdays, nSubws, nSegs, nSFR_inflow_segs, month, opt%DAILY_SW)      ! Convert remaining surface water and runoff to SFR inflows at end of the month	
+        CALL water_mover_sfr(im, numdays, opt%daily_sw)
         ann_spec_ag_vol = ann_spec_ag_vol + SUM(ag_wells%specified_volume)	      ! add monthly specified ag pumping volume to annual total
         ann_spec_muni_vol = ann_spec_muni_vol + SUM(muni_wells%specified_volume)  ! add monthly specified volume to annual total
       endif
