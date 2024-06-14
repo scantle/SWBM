@@ -80,6 +80,12 @@ PROGRAM SWBM
   write(log_unit,'(A7,I6,A14,I4,A12,I5,A14,I5,A12,I3,A10,I5)') "npoly =", npoly, "nlandcover =", nlandcover, "nAgWells =", nAgWells, &
   "nMuniWells =", nMuniWells, "nSubws =", nSubws, "nmonths =", nmonths
   call opt%write_options_to_log(log_unit)
+  
+  ! Copy template files over for writing (previously done by system_commands.txt)
+  call copy_file(sfr_network_file, trim(model_name)//'.sfr')
+  call copy_file(ets_template_file, trim(model_name)//'.ets')
+  call copy_file(wel_template_file, trim(model_name)//'.wel')
+  if (len_trim(sfr_jtf_file) > 0) call copy_file(sfr_jtf_file, trim(model_name)//'_SFR.jtf')
 
   ! Read in zone/property related files before time loop
   ALLOCATE(rch_zones(nrows,ncols))
@@ -114,13 +120,14 @@ PROGRAM SWBM
   
   CALL initialize_streams(nSubws, nSFR_inflow_segs)
   CALL read_landcover_table(nlandcover)
-  
-  !LS Read in irrigation ditch & water mover
-  if (trim(ditch_file) /= "") call read_irr_ditch_input_file(ditch_file)
-  if (trim(water_mover_file) /= "") call read_water_mover_input_file(water_mover_file)
 
   CALL readpoly(npoly, nrows, ncols, rch_zones)                  ! Read in field info
   CALL initialize_wells(npoly, nAgWells, nMuniWells)             ! Read in Ag well info
+  
+  !LS Read in irrigation ditch & water mover
+  if (len_trim(ditch_file)       > 0) call read_irr_ditch_input_file(ditch_file)
+  if (len_trim(water_mover_file) > 0) call read_water_mover_input_file(water_mover_file)
+
   open(unit=82, file = poly_landcover_file, status = 'old')
   read(82,*)  ! read header into nothing
 

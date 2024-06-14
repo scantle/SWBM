@@ -23,11 +23,11 @@ module water_mover
     use m_file_io
     use m_vstringlist, only: t_vstringlist
     use irrigation, only: nsegs
-    use define_fields, only: npoly, nAgWells
+    use define_fields, only: npoly, nAgWells, ag_wells
     implicit none
     character(*), intent(in)     :: filename
     type(t_file_reader), pointer :: reader
-    integer                      :: i
+    integer                      :: i,j
     character(10)                :: temp
     real                         :: rate
     
@@ -60,12 +60,19 @@ module water_mover
           move_type(2,i) = find_string_index_in_list(strings, 3, "WELL,SFR,MAR", toupper=.true.)
           from_to(2,i)   = item2int(strings, 4)
           move_date(1,i) = item2int(strings, 5)
-          move_date(1,i) = item2int(strings, 6)
+          move_date(2,i) = item2int(strings, 6)
           rate           = item2real(strings,7)
           
           ! Handle Move FROM
           select case(move_type(1,i))
             case(1) ! WELL
+              do j=1, nAgWells
+                if (from_to(1,i)==ag_wells(j)%well_id) then
+                  from_to(1,i) = j
+                  exit
+                end if
+              end do
+              ! TODO real check
               if ((from_to(1,i) > 0) .and. (from_to(1,i) <= nAgWells)) then
                 wel_rate(i) = -1 * rate
               else
@@ -86,6 +93,13 @@ module water_mover
           ! Handle Move TO
           select case(move_type(2,i))
             case(1) ! WELL
+              do j=1, nAgWells
+                if (from_to(2,i)==ag_wells(j)%well_id) then
+                  from_to(2,i) = j
+                  exit
+                end if
+              end do
+              ! TODO real check
               if (from_to(2,i) > 0 .or. from_to(2,i) <= nAgWells) then
                 wel_rate(i) = rate
               else
@@ -117,8 +131,8 @@ module water_mover
     end select
     
     ! Setup min/max months
-    min_month = minval(move_date)
-    max_month = maxval(move_date)
+    min_month = minval(move_date(1,:))
+    max_month = maxval(move_date(2,:))
   
   end subroutine read_water_mover_input_file
 !-------------------------------------------------------------------------------------------------!
@@ -136,7 +150,7 @@ module water_mover
     if (im < min_month .or. im >= max_month) return
     
     do i=1, nmoves
-      if ((move_date(1,i) >= im .and. move_date(2,i) < im).and.(move_type(2,i)==3)) then  ! GE start and LT end and MAR TO
+      if ((im >= move_date(1,i) .and. im < move_date(2,i)).and.(move_type(2,i)==3)) then  ! GE start and LT end and MAR TO
         ! Add to daily accumulator
         daily(from_to(2,i))%mar_depth = daily(from_to(2,i))%mar_depth + mar_rate(i) / fields(from_to(2,i))%area
       end if
@@ -163,10 +177,10 @@ module water_mover
     if (im < min_month .or. im >= max_month) return
     
     do i=1, nmoves
-      if (move_date(1,i) >= im .and. move_date(2,i) < im) then  ! GE start and LT end
+      if (im >= move_date(1,i) .and. im < move_date(2,i)) then  ! GE start and LT end
         ! adjust SFR Routing accumulator
-        if (move_type(1,i)==2) SFR_Routing(from_to(1,i))%FLOW_DAILY(1:looplen) = SFR_Routing(from_to(1,i))%FLOW_DAILY(1:looplen) + sfr_rate(i) * numdays
-        if (move_type(2,i)==2) SFR_Routing(from_to(2,i))%FLOW_DAILY(1:looplen) = SFR_Routing(from_to(2,i))%FLOW_DAILY(1:looplen) + sfr_rate(i) * numdays
+        if (move_type(1,i)==2) SFR_Routing(from_to(1,i))%FLOW_DAILY(1:looplen) = SFR_Routing(from_to(1,i))%FLOW_DAILY(1:looplen) + (sfr_rate(i) * numdays/looplen)
+        if (move_type(2,i)==2) SFR_Routing(from_to(2,i))%FLOW_DAILY(1:looplen) = SFR_Routing(from_to(2,i))%FLOW_DAILY(1:looplen) + (sfr_rate(i) * numdays/looplen)
       end if
     end do
   
@@ -186,10 +200,10 @@ module water_mover
     if (im < min_month .or. im >= max_month) return
     
     do i=1, nmoves
-      if (move_date(1,i) >= im .and. move_date(2,i) < im) then  ! GE start and LT end
+      if (im >= move_date(1,i) .and. im < move_date(2,i)) then  ! GE start and LT end
         ! adjust SFR Routing accumulator
-        if (move_type(1,i)==1) agwells_monthly_vol(from_to(1,i)) = agwells_monthly_vol(from_to(1,i)) + wel_rate(i) * numdays
-        if (move_type(2,i)==1) agwells_monthly_vol(from_to(2,i)) = agwells_monthly_vol(from_to(2,i)) + wel_rate(i) * numdays
+        if (move_type(1,i)==1) agwells_monthly_vol(from_to(1,i)) = agwells_monthly_vol(from_to(1,i)) + (wel_rate(i) * numdays)
+        if (move_type(2,i)==1) agwells_monthly_vol(from_to(2,i)) = agwells_monthly_vol(from_to(2,i)) + (wel_rate(i) * numdays)
       end if
     end do
   

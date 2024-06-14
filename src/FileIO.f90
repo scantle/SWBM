@@ -323,7 +323,7 @@ module m_file_io
     character(256),intent(in)    :: iomsg
     
     if (this%ioerr /= 0) then
-      write(*,'(a)') trim(iomsg)
+      !write(*,'(a)') trim(iomsg)
       write(log_unit,'(3a)') 'IO Error - ', trim(iomsg)
       close(this%unit)
       error stop
@@ -619,9 +619,9 @@ module m_file_io
   function get_data_len(this,rewind_to_last_line) result(data_len)
     implicit none
     class(t_file_reader), intent(in) :: this
-    integer                         :: i, data_len, eof, ierr
-    character(200)                  :: line
-    logical, optional               :: rewind_to_last_line
+    integer                          :: i, data_len, eof, ierr
+    character(200)                   :: line
+    logical, optional                :: rewind_to_last_line
 
     data_len = 0
           

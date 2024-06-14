@@ -188,7 +188,7 @@ module m_read_main_input
     use m_global
     implicit none
     type(t_file_reader), pointer    :: reader
-    logical                         :: has_necessary_items(7) = .false.
+    logical                         :: has_necessary_items(10) = .false.
     
     ! Standard file reader variables
     integer                    :: status, length
@@ -221,6 +221,18 @@ module m_read_main_input
         case("POLY_LANDCOVER")
           call item2char(strings, 2, poly_landcover_file)
           has_necessary_items(7) = .true.
+        case("SFR_NETWORK")
+          call item2char(strings, 2, sfr_network_file)
+          has_necessary_items(8) = .true.
+        case("ETS_TEMPLATE")
+          call item2char(strings, 2, ets_template_file)
+          has_necessary_items(9) = .true.
+        case("WEL_TEMPLATE","WELL_TEMPLATE")
+          call item2char(strings, 2, wel_template_file)
+          has_necessary_items(10) = .true.
+        case("SFR_NETWORK_JTF")
+          call item2char(strings, 2, sfr_jtf_file)
+          has_necessary_items(8) = .true.
         case("IRR_DITCH")
           call item2char(strings, 2, ditch_file)
         case("ET_ZONE_CELLS")

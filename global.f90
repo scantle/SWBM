@@ -18,6 +18,9 @@ module m_global
   character(100)   :: kc_frac_file
   character(100)   :: sfr_partition_file
   character(100)   :: poly_landcover_file
+  character(100)   :: sfr_network_file
+  character(100)   :: ets_template_file
+  character(100)   :: wel_template_file
   
   ! Optional Files
   character(100)   :: ditch_file
@@ -25,6 +28,7 @@ module m_global
   character(100)   :: MAR_depth_file
   character(100)   :: curtail_frac_file
   character(100)   :: water_mover_file
+  character(100)   :: sfr_jtf_file
   
   ! Output arrays
   integer,allocatable       :: daily_out_idx(:)
@@ -54,11 +58,16 @@ module m_global
   kc_frac_file        = ""
   sfr_partition_file  = ""
   poly_landcover_file = ""
+  sfr_network_file    = ""
+  ets_template_file   = ""
+  wel_template_file   = ""
   ditch_file          = ""
   et_zones_file       = ""
   MAR_depth_file      = ""
   curtail_frac_file   = ""
   recharge_zones_file = ""
+  water_mover_file    = ""
+  sfr_jtf_file        = ""
   
   end subroutine init_globals
   

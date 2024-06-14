@@ -952,5 +952,33 @@ SUBROUTINE write_UCODE_SFR_template(im, month, nSegs, model_name, total_days, da
 
 !  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+  subroutine copy_file(from_file, to_file)
+    use m_file_io, only: t_file_reader, t_file_writer, open_file_reader, open_file_writer
+    use m_error_handler, only: error_handler
+    implicit none
+    character(*),intent(in)       :: from_file, to_file
+    integer                       :: uin, uout, iostat
+    type(t_file_reader),pointer   :: fin
+    type(t_file_writer),pointer   :: fout
+    character(3000)               :: line
+    
+    fin  => open_file_reader(from_file)
+    fout => open_file_writer(to_file)
+    uin  = fin%unit
+    uout = fout%unit
+    
+    ! Copy characters from the input file to the output file
+    do
+      read(uin, '(A)', iostat=iostat) line
+      if (iostat /= 0) exit
+      write(uout, '(A)') trim(line)
+    end do
+    
+    call fin%close_file()
+    call fout%close_file()
+    
+  end subroutine copy_file
 
+!  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  
 END MODULE
