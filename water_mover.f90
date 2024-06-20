@@ -74,7 +74,7 @@ module water_mover
               end do
               ! TODO real check
               if ((from_to(1,i) > 0) .and. (from_to(1,i) <= nAgWells)) then
-                wel_rate(i) = -1 * rate
+                wel_rate(i) = rate  ! Rate is positive until written to WEL in write_MODFLOW_WEL
               else
                 call item2char(strings, 2, temp)
                 call error_handler(1,reader%file,"Invalid from well id, check nAgWells. well id = "//temp)
@@ -101,7 +101,7 @@ module water_mover
               end do
               ! TODO real check
               if (from_to(2,i) > 0 .or. from_to(2,i) <= nAgWells) then
-                wel_rate(i) = rate
+                wel_rate(i) = -1 * rate  ! Rate is positive until written to WEL in write_MODFLOW_WEL
               else
                 call item2char(strings, 4, temp)
                 call error_handler(1,reader%file,"Invalid from well id, check nAgWells. well id = "//temp)
