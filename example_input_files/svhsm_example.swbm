@@ -1,0 +1,64 @@
+#===============================================================#
+#                Soil Water Budget Model (SWBM)                 #
+#===============================================================#
+
+BEGIN DISCRETIZATION
+  NMONTHS          252
+  WYSTART         2000
+  NPOLY           2953
+  NSUBWS            11
+  NLANDCOVER         9
+  NAGWELLS          85
+  NMUNIWELLS         5
+  # MODFLOW INFO
+  MFNAME         SVHSM
+  NROWS            216
+  NCOLS            243
+  NSFR_INFLOW_SEGS  17
+END DISCRETIZATION
+
+BEGIN OPTIONS
+  WRITE_UCODE
+  WRITE_MODFLOW
+  INFLOW_IS_VOL
+END OPTIONS
+
+BEGIN PARAMETERS
+  RD_MULT    1.0
+END PARAMETERS
+
+BEGIN INPUT_FILES
+  PRECIP            precip.txt
+  ET                ref_et.txt
+  KC_FRAC           kc_values.txt
+  SFR_NETWORK       SFR_network.txt
+  RECHARGE_ZONES    recharge_zones.txt
+  SFR_PARTITION     SFR_subws_flow_partitioning.txt
+  POLY_LANDCOVER    polygon_landcover_ids.txt
+#  MNW2_TEMPLATE     MNW2_wells.txt
+END INPUT_FILES
+
+BEGIN PRINT_DAILY
+# Field ID, filename_prefix
+     1  NV_GW_Non-Irrigated
+     3  P_GW_Non-Irrigated
+     6  AG_GW_WL
+     8  AG_GW_Non-Irrigated
+     9  P_SW_Non-Irrigated
+    12  P_SW_Flood
+    26  AG_GW_CP
+    30  AG_Mixed_CP
+    46  Barren_GW_Non-Irrigated
+    60  AG_SW_Non-Irrigated
+   103  P_Mixed_Flood
+   112  NV_SW_Non-Irrigated
+   337  Water_GW_Non-Irrigated
+   815  P_GW_WL
+   971  P_GW_CP
+  1066  Water_SW_Non-Irrigated
+  1271  P_GW_Flood
+  1333  AG_SW_Flood
+  1475  Barren_SW_Non-Irrigated
+  1503  AG_SW_WL
+  2322  NV_GW_WL
+END PRINT_DAILY
