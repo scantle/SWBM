@@ -1,2 +1,0 @@
-modelName  WYstart  npoly  nlandcover  nAgWells  nMuniWells  nSubws inflow_is_vol nSFR_inflow_segs  nmonths  nrows  ncols  UCODE/PEST  Basecase/MAR/ILR/MAR_ILR
-SVHSM  2000  2953  9  85  5  11  TRUE  17  252  216  243  UCODE  Basecase

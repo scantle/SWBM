@@ -17,13 +17,12 @@ MODULE SWBM_output
    
   CONTAINS
   
-  SUBROUTINE output_files(model_name, daily_out_flag)
-  
-    LOGICAL, INTENT(IN) :: daily_out_flag
+  SUBROUTINE output_files(model_name)
+    use m_global, only: n_daily_out, daily_out_nms
     CHARACTER(20), INTENT(IN) :: model_name
     INTEGER, DIMENSION(npoly) :: field_ids
     REAL :: ann_spec_ag_vol, ann_spec_muni_vol
-    INTEGER :: i
+    INTEGER :: i, unit_num
     CHARACTER(14), DIMENSION(npoly)  :: header_text
     CHARACTER(14) :: temp_text
     
@@ -37,7 +36,7 @@ MODULE SWBM_output
     open(unit=900, file='Recharge_Total.dat', status = 'replace')   
     write(900,*)'Total_Recharge_m^3/day  Total_Recharge_m^3'            
     open(unit=84, file=trim(model_name)//'.rch', Access = 'append', status='replace')                                                  
-    open(unit=90, file='monthly_effective_precip_linear.dat', status = 'replace')              
+    open(unit=90, file='monthly_effective_precip_linear.dat', status = 'replace')
     write(90,*)'Monthly precip applied to each field normalized to the field area (m)'
     write(90,'(a14,a1,9999a14)')' Stress_Period',' ', header_text
     open(unit=91, file='monthly_GW_pumping_linear.dat', status = 'replace')              
@@ -86,14 +85,20 @@ MODULE SWBM_output
     open(unit=207, file='monthly_effective_precip_volume.dat', status = 'replace')
     write(207,*)'Monthly effective precip volume applied to each field (m^3)'
     write(207,'(a14,a1,9999a14)')' Stress_Period',' ', header_text       
-                               
+
+    do i=1, n_daily_out
+  	  unit_num =  599 + i 
+  	  daily_out_nms(i) = trim(daily_out_nms(i)) // '_daily_out.dat'
+  	  open(unit=unit_num, file=daily_out_nms(i))
+  	  write(unit_num,'(2a)')'field_id  effective_precip  streamflow  SW_irrig  GW_irr  total_irr  rch  run  swc  pET',&
+  	                  '  aET  deficiency  residual  field_capacity  subws_ID  SWBM_LU  landcover_id'    
+    enddo
     
-    if (daily_out_flag) then
-      open(unit=530, file='daily_gw_irr.dat', status = 'replace')
-      write(530, *)"Daily gw_irr volume (m^3) for each well"
-      ! write(530,'(9999i6)')ag_wells(:)%well_id
-      write(530,*) ag_wells(:)%well_name
-    endif
+    open(unit=530, file='daily_gw_irr.dat', status = 'replace')
+    write(530, *)"Daily gw_irr volume (m^3) for each well"
+    ! write(530,'(9999i6)')ag_wells(:)%well_id
+    write(530,*) ag_wells(:)%well_name
+      
     open(unit=531, file='Monthly_Ag_GW_Pumping_Volume_By_Well.dat', status = 'replace')
     write(531,*)'Monthly Ag Groundwater Pumping Volume (m^3) by Well'
     ! write(531,'(9999i6)')ag_wells(:)%well_id
@@ -328,10 +333,11 @@ MODULE SWBM_output
      
 !  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~	
      
-  SUBROUTINE groundwater_pumping(jday, nAgWells, npoly, numdays, daily_out_flag, ag_wells_specified)
-       
-     INTEGER, INTENT(IN) :: jday, nAgWells, npoly, numdays
-     LOGICAL, INTENT(IN) :: daily_out_flag, ag_wells_specified
+  SUBROUTINE groundwater_pumping(jday, nAgWells, npoly, numdays, im, ag_wells_specified)
+    use water_mover, only: water_mover_well
+    implicit none
+     INTEGER, INTENT(IN) :: jday, nAgWells, npoly, numdays, im
+     LOGICAL, INTENT(IN) :: ag_wells_specified
      INTEGER :: i, well_idx
      
      ag_wells%daily_vol = 0.                  ! set daily value to zero
@@ -347,15 +353,17 @@ MODULE SWBM_output
      	 else 
      	   ag_wells(fields(i)%well_idx)%daily_vol =   daily(i)%gw_irr*fields(i)%area               ! assign daily gw_irr volume   
          ag_wells(fields(i)%well_idx)%monthly_vol = ag_wells(fields(i)%well_idx)%monthly_vol + &
-         ag_wells(fields(i)%well_idx)%daily_vol    ! Add daily volume to monthly counter
+                                                    ag_wells(fields(i)%well_idx)%daily_vol    ! Add daily volume to monthly counter
        endif
-     enddo      
+     enddo  
      
-     if(daily_out_flag) write(530,'(200es20.8)') ag_wells%daily_vol
+     write(530,'(200es20.8)') ag_wells%daily_vol
      
      if (jday==numdays) then
        ag_wells%specified_rate = ag_wells%specified_volume / numdays
        muni_wells%specified_rate = muni_wells%specified_volume / numdays
+       
+       call water_mover_well(im, numdays, ag_wells%monthly_vol)
        
        if (ag_wells_specified) then
          write(531,'(172es20.8)') ag_wells%specified_volume
@@ -494,25 +502,23 @@ MODULE SWBM_output
   
 !  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
   
-   SUBROUTINE daily_out(num_daily_out,ip_daily_out)
-     
-     INTEGER, INTENT(in) ::  num_daily_out
-     INTEGER, DIMENSION(num_daily_out), INTENT(in) :: ip_daily_out
+   SUBROUTINE daily_out()
+     use m_global, only: daily_out_idx,daily_out_nms,n_daily_out
      INTEGER  :: unit_num, i
      
-     do i=1,num_daily_out
+     do i=1,n_daily_out
        unit_num = 599+i
        !'field_id  effective_precip  streamflow  SW_irrig  GW_irr  total_irr  rch  run  swc  pET aET  deficiency  residual  field_capacity  subws_ID  SWBM_LU  landcover_id'  
-       write(unit_num,'(i5,1F10.6,1F17.6,11F10.6,3i4)') ip_daily_out(i), daily(ip_daily_out(i))%effprecip, &
-         surfaceWater(fields(ip_daily_out(i))%subws_ID)%avail_sw_vol,&
-         daily(ip_daily_out(i))%tot_irr - daily(ip_daily_out(i))%gw_irr,&
-         daily(ip_daily_out(i))%gw_irr, daily(ip_daily_out(i))%tot_irr, &
-         daily(ip_daily_out(i))%recharge, daily(ip_daily_out(i))%runoff, &
-         daily(ip_daily_out(i))%swc, daily(ip_daily_out(i))%pET,  daily(ip_daily_out(i))%aET, &
-         daily(ip_daily_out(i))%deficiency, daily(ip_daily_out(i))%residual, &
-         fields(ip_daily_out(i))%whc*crops(fields(ip_daily_out(i))%landcover_id)%RootDepth, &
-         fields(ip_daily_out(i))%subws_ID, &
-         fields(ip_daily_out(i))%SWBM_LU, fields(ip_daily_out(i))%landcover_id
+       write(unit_num,'(i5,1F10.6,1F17.6,11F10.6,3i4)') daily_out_idx(i), daily(daily_out_idx(i))%effprecip, &
+         surfaceWater(fields(daily_out_idx(i))%subws_ID)%avail_sw_vol,&
+         daily(daily_out_idx(i))%tot_irr - daily(daily_out_idx(i))%gw_irr,&
+         daily(daily_out_idx(i))%gw_irr, daily(daily_out_idx(i))%tot_irr, &
+         daily(daily_out_idx(i))%recharge, daily(daily_out_idx(i))%runoff, &
+         daily(daily_out_idx(i))%swc, daily(daily_out_idx(i))%pET,  daily(daily_out_idx(i))%aET, &
+         daily(daily_out_idx(i))%deficiency, daily(daily_out_idx(i))%residual, &
+         fields(daily_out_idx(i))%whc*crops(fields(daily_out_idx(i))%landcover_id)%RootDepth, &
+         fields(daily_out_idx(i))%subws_ID, &
+         fields(daily_out_idx(i))%SWBM_LU, fields(daily_out_idx(i))%landcover_id
      enddo                                                                                              ! Field IDs for Daily Output
    END SUBROUTINE daily_out
      
@@ -946,5 +952,33 @@ SUBROUTINE write_UCODE_SFR_template(im, month, nSegs, model_name, total_days, da
 
 !  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+  subroutine copy_file(from_file, to_file)
+    use m_file_io, only: t_file_reader, t_file_writer, open_file_reader, open_file_writer
+    use m_error_handler, only: error_handler
+    implicit none
+    character(*),intent(in)       :: from_file, to_file
+    integer                       :: uin, uout, iostat
+    type(t_file_reader),pointer   :: fin
+    type(t_file_writer),pointer   :: fout
+    character(3000)               :: line
+    
+    fin  => open_file_reader(from_file)
+    fout => open_file_writer(to_file)
+    uin  = fin%unit
+    uout = fout%unit
+    
+    ! Copy characters from the input file to the output file
+    do
+      read(uin, '(A)', iostat=iostat) line
+      if (iostat /= 0) exit
+      write(uout, '(A)') trim(line)
+    end do
+    
+    call fin%close_file()
+    call fout%close_file()
+    
+  end subroutine copy_file
 
+!  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  
 END MODULE
