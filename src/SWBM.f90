@@ -85,7 +85,7 @@ PROGRAM SWBM
   call copy_file(sfr_network_file, trim(model_name)//'.sfr')
   call copy_file(ets_template_file, trim(model_name)//'.ets')
   call copy_file(wel_template_file, trim(model_name)//'.wel')
-  if (len_trim(sfr_jtf_file) > 0) call copy_file(sfr_jtf_file, trim(model_name)//'_SFR.jtf')
+  if (trim(sfr_jtf_file) /= "") call copy_file(sfr_jtf_file, trim(model_name)//'_SFR.jtf')  ! TODO should error if WRITE_UCODE is TRUE
 
   ! Read in zone/property related files before time loop
   ALLOCATE(rch_zones(nrows,ncols))
@@ -125,8 +125,8 @@ PROGRAM SWBM
   CALL initialize_wells(npoly, nAgWells, nMuniWells)             ! Read in Ag well info
   
   !LS Read in irrigation ditch & water mover
-  if (len_trim(ditch_file)       > 0) call read_irr_ditch_input_file(ditch_file)
-  if (len_trim(water_mover_file) > 0) call read_water_mover_input_file(water_mover_file)
+  if (trim(ditch_file)       /= "") call read_irr_ditch_input_file(ditch_file)
+  if (trim(water_mover_file) /= "") call read_water_mover_input_file(water_mover_file)
 
   open(unit=82, file = poly_landcover_file, status = 'old')
   read(82,*)  ! read header into nothing
