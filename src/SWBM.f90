@@ -196,7 +196,7 @@ PROGRAM SWBM
       read(79,*) date_text, crops(:)%daily_kc 
       daily%effprecip = stn_precip * fields%precip_fact
       daily%mar_depth = fields(:)%mar_depth / numdays
-      ! CUrrently here - checking pET for native veg land use
+      ! Currently here - checking pET for native veg land use
       !write(*,'(A25,F4.2,F4.2)') "natveg k_c and kc_mult: ",crops(4)%daily_kc, crops(4)%kc_mult
       daily%pET=ETo * crops(fields%landcover_id)%daily_kc * crops(fields%landcover_id)%kc_mult                        ! Set ET to current value for the day
       

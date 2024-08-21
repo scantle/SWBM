@@ -223,16 +223,20 @@ MODULE irrigation
           fields(ip)%irr_flag = 1 ! Set field status to irrigating (even if already the case)
           daily(ip)%tot_irr=max(0.,((daily(ip)%pET-daily(ip)%effprecip)/irreff))                                   ! Calculate applied linear irrigation (depth units)
           daily(ip)%tot_irr = daily(ip)%tot_irr * (1 - fields(ip)%curtail_frac)                                    ! Subtract curtailment fraction (default: 0) from calculated irr. demand
+          ! daily(ip)%tot_irr = daily(ip)
           select case (fields(ip)%water_source)                                                                        ! Assign irrigation to water source
-    		case(1) ! surface water
-          !write(*,'(a10,I3,A24,F16.4)') "subws:", subws, "subws avail sw vol: ", surfaceWater(subws)%avail_sw_vol
-          !if(ip==1627) write(*,'(I4,F8.1)') jday, daily(ip)%tot_irr * fields(ip)%area
-    			if (surfaceWater(subws)%avail_sw_vol >= (daily(ip)%tot_irr * fields(ip)%area)) then                                ! If available surface water exceeds demand
-            !write(*,*) "made it into the Avail_SW > demand loop"
-            !write(*,'(A15,I3, A7, I3)') "watersource: ", fields(ip)%water_source, "crop: ", fields(ip)%landcover_id
-    			  surfaceWater(subws)%sw_irr = surfaceWater(subws)%sw_irr + (daily(ip)%tot_irr * fields(ip)%area)                  ! Add daily irrigation volume to total surface water irrigation 
-    			  surfaceWater(subws)%avail_sw_vol = surfaceWater(subws)%avail_sw_vol - (daily(ip)%tot_irr * fields(ip)%area)      ! Update available surface water volume	
-    			else if (surfaceWater(subws)%avail_sw_vol < (daily(ip)%tot_irr * fields(ip)%area) &                                  ! If supply is less than demand but greater than 0
+          case(1) ! surface water
+              ! add MAR to tot_irr to make sure MAR volume is accounted for
+              !debug
+              !write(*,'(a10,I3,A24,F16.4)') "subws:", subws, "subws avail sw vol: ", surfaceWater(subws)%avail_sw_vol
+              !if(ip==1627) write(*,'(I4,F8.1)') jday, daily(ip)%tot_irr * fields(ip)%area
+    			if (surfaceWater(subws)%avail_sw_vol >= ((daily(ip)%tot_irr + daily(ip)%mar_depth) * fields(ip)%area)) then                                ! If available surface water exceeds demand
+                    !debug
+                    !write(*,*) "made it into the Avail_SW > demand loop"
+                    !write(*,'(A15,I3, A7, I3)') "watersource: ", fields(ip)%water_source, "crop: ", fields(ip)%landcover_id
+    			  surfaceWater(subws)%sw_irr = surfaceWater(subws)%sw_irr + ((daily(ip)%tot_irr + daily(ip)%mar_depth) * fields(ip)%area)          ! Add daily irrigation volume to total surface water irrigation 
+    			  surfaceWater(subws)%avail_sw_vol = surfaceWater(subws)%avail_sw_vol - ((daily(ip)%tot_irr + daily(ip)%mar_depth) * fields(ip)%area)      ! Update available surface water volume	
+    			else if (surfaceWater(subws)%avail_sw_vol < ((daily(ip)%tot_irr + daily(ip)%mar_depth) * fields(ip)%area) &                                  ! If supply is less than demand but greater than 0
     				 .and. surfaceWater(subws)%avail_sw_vol /= 0) then
     				 	daily(ip)%tot_irr = surfaceWater(subws)%avail_sw_vol / fields(ip)%area                                         ! Use remaining surface water for irrigation
             	surfaceWater(subws)%sw_irr = surfaceWater(subws)%sw_irr + surfaceWater(subws)%avail_sw_vol                     ! Use remaining surface water for irrigation
@@ -242,14 +246,15 @@ MODULE irrigation
     			end if
     	  case(2) ! groundwater
     	  	daily(ip)%gw_irr = daily(ip)%tot_irr  ! All irrigation assigned to groundwater well
-    	case(3) ! Mixed Water Source
-    			if (surfaceWater(subws)%avail_sw_vol >= (daily(ip)%tot_irr * fields(ip)%area)) then                                ! If available surface water exceeds demand
-    			  surfaceWater(subws)%sw_irr = surfaceWater(subws)%sw_irr + (daily(ip)%tot_irr * fields(ip)%area)                  ! Add daily irrigation volume to total surface water irrigation 
-    			  surfaceWater(subws)%avail_sw_vol = surfaceWater(subws)%avail_sw_vol - (daily(ip)%tot_irr * fields(ip)%area)      ! Update available surface water volume	
-    			else if (surfaceWater(subws)%avail_sw_vol < (daily(ip)%tot_irr * fields(ip)%area) &                                ! If supply is less than demand but greater than 0
+          case(3) ! Mixed Water Source
+              !add MAR depth to tot_irr to ensure volume is accounted for
+    			if (surfaceWater(subws)%avail_sw_vol >= ((daily(ip)%tot_irr + daily(ip)%mar_depth) * fields(ip)%area)) then   !If there is more SW avail. than irr. demand + MAR                             ! If available surface water exceeds demand
+    			  surfaceWater(subws)%sw_irr = surfaceWater(subws)%sw_irr + ((daily(ip)%tot_irr + daily(ip)%mar_depth) * fields(ip)%area)                  ! Add daily irrigation volume to total surface water irrigation 
+    			  surfaceWater(subws)%avail_sw_vol = surfaceWater(subws)%avail_sw_vol - ((daily(ip)%tot_irr + daily(ip)%mar_depth) * fields(ip)%area)      ! Update available surface water volume	
+    			else if (surfaceWater(subws)%avail_sw_vol < ((daily(ip)%tot_irr + daily(ip)%mar_depth) * fields(ip)%area) &                                ! If supply is less than demand but greater than 0
     				 .and. surfaceWater(subws)%avail_sw_vol /= 0) then
             	surfaceWater(subws)%sw_irr = surfaceWater(subws)%sw_irr + surfaceWater(subws)%avail_sw_vol                     ! Use remaining surface water for irrigation
-            	daily(ip)%gw_irr = daily(ip)%tot_irr - (surfaceWater(subws)%avail_sw_vol / fields(ip)%area)                    ! Use GW for remainder of demand
+            	daily(ip)%gw_irr = (daily(ip)%tot_irr + daily(ip)%mar_depth) - (surfaceWater(subws)%avail_sw_vol / fields(ip)%area)                    ! Use GW for remainder of demand
             	surfaceWater(subws)%avail_sw_vol = 0.                                                                          ! Set remaining surface water to zero
     			else !if (surfaceWater(subws)%avail_sw_vol == 0)
     				  daily(ip)%gw_irr =  daily(ip)%tot_irr                                   ! All irrigation assigned to groundwater well
@@ -260,11 +265,22 @@ MODULE irrigation
     	  	daily(ip)%tot_irr = 0.  ! No irrigation applied
     	  case(999) ! unknown, assume GW source
     	  	daily(ip)%gw_irr = daily(ip)%tot_irr  ! All irrigation assigned to groundwater well
-    	end select
+          end select
+    else                 ! if not irrigating, add MAR volume to tot_irr for field and to SW Irr from each subwatershed (if enough SW is avail.)
+        if (surfaceWater(subws)%avail_sw_vol >= (daily(ip)%mar_depth * fields(ip)%area)) then       ! If available surface water exceeds demand
+            surfaceWater(subws)%sw_irr = surfaceWater(subws)%sw_irr + (daily(ip)%mar_depth * fields(ip)%area)          ! Add daily irrigation volume to total surface water irrigation 
+    		surfaceWater(subws)%avail_sw_vol = surfaceWater(subws)%avail_sw_vol - (daily(ip)%mar_depth * fields(ip)%area)      ! Update available surface water volume	
+        else if (surfaceWater(subws)%avail_sw_vol < (daily(ip)%mar_depth * fields(ip)%area) &                                  ! If supply is less than demand but greater than 0
+        .and. surfaceWater(subws)%avail_sw_vol /= 0) then
+            daily(ip)%mar_depth = surfaceWater(subws)%avail_sw_vol / fields(ip)%area                                         ! Use remaining surface water for irrigation
+            surfaceWater(subws)%sw_irr = surfaceWater(subws)%sw_irr + surfaceWater(subws)%avail_sw_vol                     ! Use remaining surface water for irrigation
+            	surfaceWater(subws)%avail_sw_vol = 0.                                                                          ! Set remaining surface water to zero
+        else
+            daily(ip)%mar_depth = 0.                                                  ! Irrigation set to zero when surface-water supplies are exceeded 
+        endif
+        daily(ip)%tot_irr = daily(ip)%tot_irr + daily(ip)%mar_depth       ! Add MAR depth (default: 0) to total irrigation
     endif
     
-    daily(ip)%tot_irr = daily(ip)%tot_irr + daily(ip)%mar_depth       ! Regardless of "irrigating" status, add MAR depth (default: 0) to total irrigation
-
 
     !if(daily(ip)%gw_irr > 1000000) then ! if it's infinity
     !  write(*,'(A25,I5)') "infinite GW on field id ", ip
