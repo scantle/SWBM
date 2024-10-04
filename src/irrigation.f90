@@ -82,18 +82,28 @@ MODULE irrigation
     
     INTEGER, INTENT(IN) :: numdays
     LOGICAL, INTENT(IN) :: inflow_is_vol, daily_sw
-    INTEGER :: i, looplen=1
+    INTEGER :: i, j, looplen=1
     CHARACTER(10) :: date_dummy
+    REAL*8 :: inflow_irr_tmp(nSubws)
+    REAL*8 :: inflow_nonirr_tmp(nSubws)
     
     ! set looplen to days in month if doing daily flows
     if (daily_sw) looplen = numdays
     
     ! Reset to zero variables
-    surfaceWater(:)%sw_irr = 0.0
+    surfaceWater(:)%sw_irr = 0.0d0
+    surfaceWater(:)%avail_sw_vol = 0.0d0
     
-    do i=1, looplen
-      read(215,*) date_dummy, surfaceWater(:)%inflow_irr(i)                            ! Read in date and irrigation inflow for each stream simulated
-      read(216,*) date_dummy, surfaceWater(:)%inflow_nonirr(i)                         ! Read in date and irrigation inflow for each stream simulated
+    do i = 1, looplen
+      ! Read into temporary arrays (prevents i/o warning from reading into non-contiguous locations in memory)
+      read(215,*) date_dummy, inflow_irr_tmp(1:)
+      read(216,*) date_dummy, inflow_nonirr_tmp(1:)
+
+      ! Assign values to surfaceWater components
+      do j = 1, nSubws
+        surfaceWater(j)%inflow_irr(i) = inflow_irr_tmp(j)
+        surfaceWater(j)%inflow_nonirr(i) = inflow_nonirr_tmp(j)
+      end do
     end do
 
     if (inflow_is_vol .or. daily_sw) then
@@ -240,9 +250,9 @@ MODULE irrigation
     				 .and. surfaceWater(subws)%avail_sw_vol /= 0) then
     				 	daily(ip)%tot_irr = surfaceWater(subws)%avail_sw_vol / fields(ip)%area                                         ! Use remaining surface water for irrigation
             	surfaceWater(subws)%sw_irr = surfaceWater(subws)%sw_irr + surfaceWater(subws)%avail_sw_vol                     ! Use remaining surface water for irrigation
-            	surfaceWater(subws)%avail_sw_vol = 0.                                                                          ! Set remaining surface water to zero
+            	surfaceWater(subws)%avail_sw_vol = 0.0d0                                                                       ! Set remaining surface water to zero
     			else
-    				  daily(ip)%tot_irr = 0.                                                  ! Irrigation set to zero when surface-water supplies are exceeded 
+    				  daily(ip)%tot_irr = 0.0d0                                                  ! Irrigation set to zero when surface-water supplies are exceeded 
     			end if
     	  case(2) ! groundwater
     	  	daily(ip)%gw_irr = daily(ip)%tot_irr  ! All irrigation assigned to groundwater well
@@ -260,9 +270,9 @@ MODULE irrigation
     				  daily(ip)%gw_irr =  daily(ip)%tot_irr                                   ! All irrigation assigned to groundwater well
     			end if 
     	  case(4) ! sub-irrigated
-    	  	daily(ip)%tot_irr = 0.  ! No irrigation applied
+    	  	daily(ip)%tot_irr = 0.0d0  ! No irrigation applied
         case(5) ! dry-farmed
-    	  	daily(ip)%tot_irr = 0.  ! No irrigation applied
+    	  	daily(ip)%tot_irr = 0.0d0  ! No irrigation applied
     	  case(999) ! unknown, assume GW source
     	  	daily(ip)%gw_irr = daily(ip)%tot_irr  ! All irrigation assigned to groundwater well
           end select
@@ -274,9 +284,9 @@ MODULE irrigation
         .and. surfaceWater(subws)%avail_sw_vol /= 0) then
             daily(ip)%mar_depth = surfaceWater(subws)%avail_sw_vol / fields(ip)%area                                         ! Use remaining surface water for irrigation
             surfaceWater(subws)%sw_irr = surfaceWater(subws)%sw_irr + surfaceWater(subws)%avail_sw_vol                     ! Use remaining surface water for irrigation
-            	surfaceWater(subws)%avail_sw_vol = 0.                                                                          ! Set remaining surface water to zero
+            	surfaceWater(subws)%avail_sw_vol = 0.0d0                                                                     ! Set remaining surface water to zero
         else
-            daily(ip)%mar_depth = 0.                                                  ! Irrigation set to zero when surface-water supplies are exceeded 
+            daily(ip)%mar_depth = 0.0d0                                                  ! Irrigation set to zero when surface-water supplies are exceeded 
         endif
         daily(ip)%tot_irr = daily(ip)%tot_irr + daily(ip)%mar_depth       ! Add MAR depth (default: 0) to total irrigation
     endif
