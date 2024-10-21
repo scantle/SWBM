@@ -204,6 +204,7 @@ PROGRAM SWBM
           if(sum(fields%irr_flag)>=opt%NEIGHBOR_RULE) then  ! Under the neighbor-irrigating rule,
             irrigating = .true.  ! if 20% of the fields are irrigating (by number, not area; 1251 total irrigated fields), set logical to true
             write(*,'(A3,I4,A27,I2,A5,I2)') "in ", WY, ", irrigating started month ", month, " day " , jday
+            write(800,'(A3,I4,A27,I2,A5,I2)') "in ", WY, ", irrigating started month ", month, " day " , jday
             !write(*,*) " "
         endif
       endif
