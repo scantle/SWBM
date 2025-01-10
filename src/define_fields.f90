@@ -52,13 +52,13 @@ END TYPE
 
 TYPE(polygon), ALLOCATABLE, DIMENSION(:) :: fields
 TYPE(accumulator), ALLOCATABLE, DIMENSION(:):: previous, monthly, daily, yearly
-TYPE(well), ALLOCATABLE, DIMENSION(:) :: ag_wells, muni_wells
+TYPE(well), ALLOCATABLE, DIMENSION(:) :: ag_wells, spec_wells
 TYPE(crop_table), ALLOCATABLE, DIMENSION(:) :: crops
 TYPE(surface_water), ALLOCATABLE, DIMENSION(:) :: surfaceWater
 TYPE(subws_flow_partitioning), ALLOCATABLE, DIMENSION(:) :: SFR_allocation
 TYPE(Stream_Segments), ALLOCATABLE, DIMENSION(:) :: SFR_Routing
-INTEGER :: npoly, nrotations, nAgWells, nMuniWells, ip, nlandcover
-REAL :: ann_spec_ag_vol, ann_spec_muni_vol
+INTEGER :: npoly, nrotations, nAgWells, nSpecWells, ip, nlandcover
+REAL :: ann_spec_well_vol
 
 contains
 
@@ -174,38 +174,32 @@ end subroutine init_accumulator
 
 ! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-SUBROUTINE initialize_wells(npoly, nAgWells, nMuniWells)
+SUBROUTINE initialize_wells(npoly, nAgWells, nSpecWells)
+  use m_global, only: agwell_locs_file, poly_agwell_file, specwell_locs_file, specwell_vol_file
 
-  INTEGER, INTENT(IN) :: npoly, nAgWells, nMuniWells
+  INTEGER, INTENT(IN) :: npoly, nAgWells, nSpecWells
   INTEGER, DIMENSION(nAgWells) :: ag_well_id
-  INTEGER, DIMENSION(nMuniWells) :: muni_well_id
+  INTEGER, DIMENSION(nSpecWells) :: spec_well_id
   INTEGER :: i, j, poly_id, well_id
-  LOGICAL :: ag_wells_specified
   CHARACTER(20) :: dummy
 
   ALLOCATE(ag_wells(nAgWells))
-  ALLOCATE(muni_wells(nMuniWells))
+  ALLOCATE(spec_wells(nSpecWells))
 
-  open(unit=537, file="ag_well_specified_volume.txt", status="old")
-  read(537,*)  dummy, dummy, ag_well_id(:)    ! read well_id for ag wells
-  open(unit=10, file="ag_well_summary.txt", status="old")
+  open(unit=10, file=agwell_locs_file, status="old")
   read(10,*)
-  write(*,*) nAgWells
+  !write(*,*) nAgWells
   do i=1, nAgWells
     read(10,*) ag_wells(i)%well_id, ag_wells(i)%well_name, ag_wells(i)%layer,&
-    ag_wells(i)%top_scrn_z, ag_wells(i)%bot_scrn_z,&
-    ag_wells(i)%well_row, ag_wells(i)%well_col, ag_wells(i)%coordx, ag_wells(i)%coordy
-    ag_wells(i)%well_name = trim(ag_wells(i)%well_name)
-    if (ag_wells(i)%well_id /= ag_well_id(i)) then
-    	write(*,*) "Ordering of agricultural wells in ag_well_summary.txt differes from that in ag_well_specified_volume.txt"
-    	write(800,*) "Ordering of agricultural wells in ag_well_summary.txt differes from that in ag_well_specified_volume.txt"
-    call EXIT
-    endif
+      ag_wells(i)%top_scrn_z, ag_wells(i)%bot_scrn_z,&
+      ag_wells(i)%well_row, ag_wells(i)%well_col, ag_wells(i)%coordx, ag_wells(i)%coordy
+      ag_wells(i)%well_name = trim(ag_wells(i)%well_name)
   enddo
   close(10)
   fields%well_id = 0
   fields%well_idx = 0
-  open(unit=10, file="ag_well_list_by_polygon.txt", status="old")
+  
+  open(unit=10, file=poly_agwell_file, status="old")
   read(10,*)  ! read header into nothing
   write(800,*)'SWBM_ID  Well_ID  WELL_IDX'
   do i = 1, npoly
@@ -217,21 +211,30 @@ SUBROUTINE initialize_wells(npoly, nAgWells, nMuniWells)
   write(800,'(3i8)') fields(i)%SWBM_id, fields(i)%well_id, fields(i)%well_idx
   enddo
   close(10)
-  open(unit=10, file="muni_well_summary.txt", status="old")
-  read(10,*)
-  open(unit=539, file="muni_well_specified_volume.txt", status="old")
-  read(539,*)  dummy, muni_well_id(:)
-  do i=1, nMuniWells
-    read(10,*) muni_wells(i)%well_id, muni_wells(i)%well_name, muni_wells(i)%top_scrn_z, muni_wells(i)%bot_scrn_z,&
-    muni_wells(i)%well_row, muni_wells(i)%well_col, muni_wells(i)%coordx, muni_wells(i)%coordy
-    muni_wells(i)%well_name = trim(muni_wells(i)%well_name)
-    if (muni_wells(i)%well_id /= muni_well_id(i)) then
-    	write(*,*) "Ordering of municpal wells in muni_well_summary.txt differes from that in muni_well_pumping_rates.txt"
-    	write(800,*) "Ordering of municpal wells in muni_well_summary.txt differes from that in muni_well_pumping_rates.txt"
-    call EXIT
-    endif
-  enddo
-  close(10)
+  
+  ! If specified wells are active
+  if (nSpecWells>0) then
+    ! Open specified well rate file, just read columns to check order
+    open(unit=539, file=specwell_vol_file, status="old")
+    read(539,*)  dummy, spec_well_id(:)
+    
+    ! Open specified well locations file, read by line & ensure order matches
+    open(unit=10, file=specwell_locs_file, status="old")
+    read(10,*)  ! Skip header
+    do i=1, nSpecWells
+      read(10,*) spec_wells(i)%well_id, spec_wells(i)%well_name, spec_wells(i)%layer, spec_wells(i)%top_scrn_z, spec_wells(i)%bot_scrn_z,&
+      spec_wells(i)%well_row, spec_wells(i)%well_col, spec_wells(i)%coordx, spec_wells(i)%coordy
+      spec_wells(i)%well_name = trim(spec_wells(i)%well_name)
+      if (spec_wells(i)%well_id /= spec_well_id(i)) then
+    	  write(*,*) "Ordering of specified wells in "// specwell_locs_file //" differes from that in "// specwell_vol_file
+    	  write(800,*) "Ordering of specified wells in "// specwell_locs_file //" differes from that in "// specwell_vol_file
+      call EXIT
+      endif
+    enddo
+    close(10)
+    spec_wells%specified_volume = 0.0
+    spec_wells%specified_rate   = 0.0
+  end if
 END subroutine initialize_wells
 
 ! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -265,8 +268,7 @@ subroutine zero_year
   yearly%mar_depth = 0.
   yearly%runoff = 0.
 
-  ann_spec_ag_vol = 0.
-  ann_spec_muni_vol = 0.
+  ann_spec_well_vol = 0.
 
 end subroutine zero_year
 ! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

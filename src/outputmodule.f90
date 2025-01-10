@@ -21,7 +21,7 @@ MODULE SWBM_output
     use m_global, only: n_daily_out, daily_out_nms
     CHARACTER(20), INTENT(IN) :: model_name
     INTEGER, DIMENSION(npoly) :: field_ids
-    REAL :: ann_spec_ag_vol, ann_spec_muni_vol
+    REAL ::  ann_spec_well_vol
     INTEGER :: i, unit_num
     CHARACTER(14), DIMENSION(npoly)  :: header_text
     CHARACTER(14) :: temp_text
@@ -108,17 +108,15 @@ MODULE SWBM_output
     ! write(532,'(9999i6)')ag_wells(:)%well_id
     write(532,*) ag_wells(:)%well_name
     
-    open(unit=533, file='Monthly_Muni_GW_Pumping_Volume_By_Well.dat', status = 'replace')
-    write(533,*)'Monthly Municipal Groundwater Pumping Volume (m^3) by Well'
-    ! write(533,'(9999i6)')ag_wells(:)%well_id
-    write(533,*) muni_wells(:)%well_name
-    open(unit=534, file='Monthly_Muni_GW_Pumping_Rate_By_Well.dat')
-    write(534,*)'Monthly Municipal Groundwater Pumping Rate (m^3/day) by Well'
-    ! write(534,'(9999i6)')ag_wells(:)%well_id
-    write(534,*) muni_wells(:)%well_name    
+    if (nSpecWells>0) then
+      open(unit=533, file='Monthly_Specified_GW_Pumping_Volume_By_Well.dat', status = 'replace')
+      write(533,*)'Monthly Specified Groundwater Pumping Volume (m^3) by Well'
+      ! write(533,'(9999i6)')ag_wells(:)%well_id
+      write(533,*) spec_wells(:)%well_name
+    end if
     
     open(unit=535, file='Annual_Groundwater_Pumping_Totals.dat')
-    write(535,*)'WaterYear  Est_Ag_Vol_m3  Specified_Ag_Vol_m3  Specified_Muni_Vol_m3  Total_Vol_m3'
+    write(535,*)'WaterYear  Est_Ag_Vol_m3  Specified_Well_Vol_m3  Total_Vol_m3'
     
     open(unit=130, file='ET_Active_Days.dat')                       
     write(130,'("Number of Days ET is Active in each polyon")')    
@@ -333,11 +331,10 @@ MODULE SWBM_output
      
 !  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~	
      
-  SUBROUTINE groundwater_pumping(jday, nAgWells, npoly, numdays, im, ag_wells_specified)
+  SUBROUTINE groundwater_pumping(jday, nAgWells, npoly, numdays, im)
     use water_mover, only: water_mover_well
     implicit none
      INTEGER, INTENT(IN) :: jday, nAgWells, npoly, numdays, im
-     LOGICAL, INTENT(IN) :: ag_wells_specified
      INTEGER :: i, well_idx
      
      ag_wells%daily_vol = 0.                  ! set daily value to zero
@@ -360,21 +357,12 @@ MODULE SWBM_output
      write(530,'(200es20.8)') ag_wells%daily_vol
      
      if (jday==numdays) then
-       ag_wells%specified_rate = ag_wells%specified_volume / numdays
-       muni_wells%specified_rate = muni_wells%specified_volume / numdays
-       
+       spec_wells%specified_rate = spec_wells%specified_volume / numdays
        call water_mover_well(im, numdays, ag_wells%monthly_vol)
-       
-       if (ag_wells_specified) then
-         write(531,'(172es20.8)') ag_wells%specified_volume
-         write(532,'(172es20.8)') ag_wells%specified_rate        
-       else 
-     	   write(531,'(172es20.8)') ag_wells%monthly_vol
-         ag_wells%monthly_rate = ag_wells%monthly_vol / numdays
-         write(532,'(172es20.8)') ag_wells%monthly_rate
-       endif
-       write(533,'(172es20.8)') muni_wells%specified_volume
-       write(534,'(172es20.8)') muni_wells%specified_rate
+       write(531,'(172es20.8)') ag_wells%monthly_vol
+       ag_wells%monthly_rate = ag_wells%monthly_vol / numdays
+       write(532,'(172es20.8)') ag_wells%monthly_rate
+       if (nSpecWells>0) write(533,'(172es20.8)') spec_wells%specified_volume
       
      endif
        
@@ -388,9 +376,16 @@ MODULE SWBM_output
   CHARACTER(20), INTENT(IN) :: model_name
   CHARACTER(30) :: filename
   !CHARACTER(24) :: wel_file
-  INTEGER :: i, well_idx, nwells_out
+  INTEGER :: i, well_idx, nwells_out, specwell_count
   
-  nwells_out = nditch_wells(month) + nAgWells
+  specwell_count = 0
+  if (nSpecWells>0) then
+    do i=1, nSpecWells
+      if (abs(spec_wells(i)%specified_rate) > 0.0) specwell_count = specwell_count + 1
+    enddo
+  end if
+  
+  nwells_out = nditch_wells(month) + nAgWells + specwell_count
   
   filename = trim(model_name) // '.wel'
 
@@ -412,6 +407,14 @@ MODULE SWBM_output
     write(536,'(3I10,ES15.3)')ag_wells(i)%layer, ag_wells(i)%well_row, ag_wells(i)%well_col, -1*ag_wells(i)%monthly_rate
   enddo
   
+  if (nSpecWells>0) then
+    do i=1, nSpecWells
+      if (abs(spec_wells(i)%specified_rate) > 0.0) then
+        write(536,'(3I10,ES15.3)')spec_wells(i)%layer, spec_wells(i)%well_row, spec_wells(i)%well_col, spec_wells(i)%specified_rate
+      endif
+    enddo
+  end if
+    
     !LS Write ditch leakage as injection
   call write_ditch_wells(536, month)
     
@@ -439,66 +442,67 @@ MODULE SWBM_output
   
   END SUBROUTINE  write_MODFLOW_WEL
 !  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
-  SUBROUTINE write_MODFLOW_MNW2(im, nAgWells, nMuniWells, ag_wells_specified)
-   
-    INTEGER, INTENT(IN) :: im, nAgWells, nMuniWells
-    LOGICAL, INTENT(IN) :: ag_wells_specified
-    INTEGER :: i, counter
-    
-    counter = 0
-    if (ag_wells_specified) then
-    	do i=1, nAgWells
-    	  if(ag_wells(i)%specified_rate > 0) then  
-    		  counter = counter + 1
-    	  endif
-      enddo
-    else
-    	do i=1, nAgWells
-    	  if(ag_wells(i)%monthly_rate > 0) then  
-    		  counter = counter + 1
-    	  endif
-      enddo
-    endif
-        
-    do i=1, nMuniWells
-    	if(muni_wells(i)%specified_rate > 0) then
-    		counter = counter + 1
-    	endif
-    enddo
-    
-    if (counter<9) then
-      write(801,'(I1, A35, I5, A6)') counter, '      ! Data Set 3 - Stress Period ',im,'; ITMP'
-    elseif (counter < 100) then
-    	write(801,'(I2, A35, I5, A6)') counter, '      ! Data Set 3 - Stress Period ',im,'; ITMP'
-    else
-    	write(801,'(I3, A35, I5, A6)') counter, '      ! Data Set 3 - Stress Period ',im,'; ITMP'
-    endif
-        
-    if (ag_wells_specified) then        ! If ag pumping rates are specified, use specified pumping rates for ag wells and municipal wells 
-      do i=1, nAgWells
-      	if(ag_wells(i)%specified_rate > 0) then
-      		write(801,'(A20, ES12.2, A4)')ag_wells(i)%well_name, -ag_wells(i)%specified_rate, '-1'
-      	endif
-      enddo
-      do i=1, nMuniWells
-        if(muni_wells(i)%specified_rate > 0) then
-      		write(801,'(A20, ES12.2, A4)')muni_wells(i)%well_name, -muni_wells(i)%specified_rate, '-1'
-      	endif
-      enddo 	
-    else                                ! If ag pumping rates are not specified, use estimated pumping rates for ag wells and specified rates for municipal wells 
-      do i=1, nAgWells
-      	if(ag_wells(i)%monthly_rate > 0) then
-      		write(801,'(A20, ES12.2, A4)')ag_wells(i)%well_name, -ag_wells(i)%monthly_rate, '-1'
-      	endif
-      enddo
-      do i=1, nMuniWells
-        if(muni_wells(i)%specified_rate > 0) then
-      		write(801,'(A20, ES12.2, A4)')muni_wells(i)%well_name, -muni_wells(i)%specified_rate, '-1'
-      	endif
-      enddo 
-    endif 
-   
-  END SUBROUTINE write_MODFLOW_MNW2
+  !SUBROUTINE write_MODFLOW_MNW2(im, nAgWells, nSpecWells, ag_wells_specified)
+  ! TODO - Add back in. WEL vs MNW2 should be an option.
+  ! 
+  !  INTEGER, INTENT(IN) :: im, nAgWells, nSpecWells
+  !  LOGICAL, INTENT(IN) :: ag_wells_specified
+  !  INTEGER :: i, counter
+  !  
+  !  counter = 0
+  !  if (ag_wells_specified) then
+  !  	do i=1, nAgWells
+  !  	  if(ag_wells(i)%specified_rate > 0) then  
+  !  		  counter = counter + 1
+  !  	  endif
+  !    enddo
+  !  else
+  !  	do i=1, nAgWells
+  !  	  if(ag_wells(i)%monthly_rate > 0) then  
+  !  		  counter = counter + 1
+  !  	  endif
+  !    enddo
+  !  endif
+  !      
+  !  do i=1, nSpecWells
+  !  	if(spec_wells(i)%specified_rate > 0) then
+  !  		counter = counter + 1
+  !  	endif
+  !  enddo
+  !  
+  !  if (counter<9) then
+  !    write(801,'(I1, A35, I5, A6)') counter, '      ! Data Set 3 - Stress Period ',im,'; ITMP'
+  !  elseif (counter < 100) then
+  !  	write(801,'(I2, A35, I5, A6)') counter, '      ! Data Set 3 - Stress Period ',im,'; ITMP'
+  !  else
+  !  	write(801,'(I3, A35, I5, A6)') counter, '      ! Data Set 3 - Stress Period ',im,'; ITMP'
+  !  endif
+  !      
+  !  if (ag_wells_specified) then        ! If ag pumping rates are specified, use specified pumping rates for ag wells and municipal wells 
+  !    do i=1, nAgWells
+  !    	if(ag_wells(i)%specified_rate > 0) then
+  !    		write(801,'(A20, ES12.2, A4)')ag_wells(i)%well_name, -ag_wells(i)%specified_rate, '-1'
+  !    	endif
+  !    enddo
+  !    do i=1, nSpecWells
+  !      if(spec_wells(i)%specified_rate > 0) then
+  !    		write(801,'(A20, ES12.2, A4)')spec_wells(i)%well_name, -spec_wells(i)%specified_rate, '-1'
+  !    	endif
+  !    enddo 	
+  !  else                                ! If ag pumping rates are not specified, use estimated pumping rates for ag wells and specified rates for municipal wells 
+  !    do i=1, nAgWells
+  !    	if(ag_wells(i)%monthly_rate > 0) then
+  !    		write(801,'(A20, ES12.2, A4)')ag_wells(i)%well_name, -ag_wells(i)%monthly_rate, '-1'
+  !    	endif
+  !    enddo
+  !    do i=1, nSpecWells
+  !      if(spec_wells(i)%specified_rate > 0) then
+  !    		write(801,'(A20, ES12.2, A4)')spec_wells(i)%well_name, -spec_wells(i)%specified_rate, '-1'
+  !    	endif
+  !    enddo 
+  !  endif 
+  ! 
+  !END SUBROUTINE write_MODFLOW_MNW2
   
 !  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
   
@@ -550,20 +554,14 @@ MODULE SWBM_output
    
 ! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~   
    
-   SUBROUTINE print_annual(WY, ag_wells_specified)
+   SUBROUTINE print_annual(WY)
    
    INTEGER, INTENT(IN) :: WY
-   LOGICAL, INTENT(IN) :: ag_wells_specified
    CHARACTER(6) :: WYtext
      
    write(WYtext, '(A2,I4)') 'WY', WY
-   if (ag_wells_specified) then                               ! Sum specified ag and muni pumping for total
-     write(535,*)WYtext, sum(yearly(:)%gw_irr_vol), ann_spec_ag_vol, ann_spec_muni_vol, &
-     ann_spec_ag_vol + ann_spec_muni_vol
-   else                                                       ! Sum estimated ag and muni pumping for total
-   	 write(535,*)WYtext, sum(yearly(:)%gw_irr_vol), ann_spec_ag_vol, ann_spec_muni_vol, &
-   	 sum(yearly(:)%gw_irr_vol) + ann_spec_muni_vol
-   endif
+   ! Sum estimated pumping for total
+   write(535,*)WYtext, sum(yearly(:)%gw_irr_vol),  ann_spec_well_vol, sum(yearly(:)%gw_irr_vol) + ann_spec_well_vol
    
    END SUBROUTINE print_annual
      

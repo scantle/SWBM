@@ -17,6 +17,8 @@ module m_read_main_input
   contains
 !-------------------------------------------------------------------------------------------------!
   subroutine read_main_input(file, opt)
+    use m_global, only: specwell_locs_file, specwell_vol_file
+    use define_fields, only: nSpecWells
     implicit none
     character(100), intent(in)  :: file
     type(t_options), intent(in) :: opt
@@ -38,6 +40,10 @@ module m_read_main_input
     if (has_necessary_blocks(2)==.false.) call error_handler(1,reader%file,"Missing Options Block!")
     !if (has_necessary_blocks(3)==.false.) call error_handler(1,reader%file,"Missing Parameters Block!")  ! Currently no parameters are specified here!
     if (has_necessary_blocks(4)==.false.) call error_handler(1,reader%file,"Missing Input_Files Block!")
+    
+    if ((trim(specwell_locs_file) == "".and.nSpecWells>0).or.(trim(specwell_vol_file) == "".and.nSpecWells>0)) then
+      call error_handler(1,reader%file,"Must specify SPECWELL_LOCS and SPECWELL_RATES input files if NSPECWELLS > 0")
+    end if
 
   end subroutine read_main_input
 !-------------------------------------------------------------------------------------------------!
@@ -92,7 +98,7 @@ module m_read_main_input
 
   subroutine read_DISCRETIZATION_block(reader)
     use m_global, only: nmonths, WYstart, nrows, ncols, model_name, nSFR_inflow_segs
-    use define_fields, only: npoly, nAgWells, nMuniWells, nlandcover
+    use define_fields, only: npoly, nAgWells, nSpecWells, nlandcover
     use irrigation, only: nsubws
     implicit none
     type(t_file_reader), pointer    :: reader
@@ -126,8 +132,8 @@ module m_read_main_input
         case("NAGWELLS")
           nAgWells = item2int(strings, 2)
           has_necessary_items(6) = .true.
-        case("NMUNIWELLS")
-          nMuniWells = item2int(strings, 2)
+        case("NSPECWELLS")
+          nSpecWells = item2int(strings, 2)
           has_necessary_items(7) = .true.
         case("NSFR_INFLOW_SEGS")
           nSFR_inflow_segs = item2int(strings, 2)
@@ -188,7 +194,7 @@ module m_read_main_input
     use m_global
     implicit none
     type(t_file_reader), pointer    :: reader
-    logical                         :: has_necessary_items(10) = .false.
+    logical                         :: has_necessary_items(12) = .false.
 
     ! Standard file reader variables
     integer                    :: status, length
@@ -221,6 +227,9 @@ module m_read_main_input
         case("POLY_LANDCOVER")
           call item2char(strings, 2, poly_landcover_file)
           has_necessary_items(7) = .true.
+        case("POLY_AGWELL")
+          call item2char(strings, 2, poly_agwell_file)
+          has_necessary_items(12) = .true.
         case("SFR_NETWORK")
           call item2char(strings, 2, sfr_network_file)
           has_necessary_items(8) = .true.
@@ -230,6 +239,13 @@ module m_read_main_input
         case("WEL_TEMPLATE","WELL_TEMPLATE")
           call item2char(strings, 2, wel_template_file)
           has_necessary_items(10) = .true.
+        case("AGWELL_LOCS")
+          call item2char(strings, 2, agwell_locs_file)
+          has_necessary_items(11) = .true.
+        case("SPECWELL_LOCS")
+          call item2char(strings, 2, specwell_locs_file)
+        case("SPECWELL_VOL")
+          call item2char(strings, 2, specwell_vol_file)
         case("SFR_NETWORK_JTF")
           call item2char(strings, 2, sfr_jtf_file)
           has_necessary_items(8) = .true.
