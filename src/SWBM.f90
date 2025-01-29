@@ -131,22 +131,28 @@ PROGRAM SWBM
   read(82,*)  ! read header into nothing
 
   ! Input files specifying field-by-field, 1 per stress period values
+  open(unit=79, file=kc_frac_file, status = 'old')   
+  read(79,*)  ! read header into nothing
+  open(unit=85, file = sfr_partition_file, status = 'old')
+  read(85,*)  ! read header into nothing
   open(unit=86, file = MAR_depth_file, status = 'old')
   read(86,*)  ! read header into nothing
   open(unit=87, file = curtail_frac_file, status = 'old')
   read(87,*)  ! read header into nothing
+  if (trim(et_cor_file) /= "") then
+    open(unit=89, file=et_cor_file, status='old')
+    read(89,*)  ! read header into nothing
+  end if
+  
   ! Input files specifying 1 value per stress period
   open(unit=887,file=precip_file, status = 'old')
   !read(887,*)  ! read header into nothing                   
   open(unit=88,file=et_file, status = 'old')
   read(88,*)  ! read header into nothing
-  open(unit=79, file=kc_frac_file, status = 'old')   
-  read(79,*)  ! read header into nothing
-  open(unit=85, file = sfr_partition_file, status = 'old')
-  read(85,*)  ! read header into nothing
 
   CALL output_files(model_name)
   fields%irr_flag = 0          ! Initialize irrigating status flag array
+  fields%et_cor   = 1.0        ! ET Correction
   month = 10                   ! Initialize month variable to start in October
   simday = 0                   ! Counter of day of simulation
   total_days = sum(ndays(:))   ! Total days in simulation
@@ -157,10 +163,11 @@ PROGRAM SWBM
   do im=1, nmonths                ! Loop over each month
     numdays = ndays(im)        ! Number of days in the current month
     if (opt%DAILY_SW) loopdays = numdays  ! needed for reading daily values, when doing daily sw calcs
-    read(82,*) date_text, fields(:)%landcover_id           ! read in landuse type (by field, for each month)
+    read(82,*) date_text, fields(1:)%landcover_id           ! read in landuse type (by field, for each month)
     !write(*,*) fields(1)%landcover_id
-    read(86,*) date_text, fields(:)%mar_depth     ! read in monthly MAR application depths (not driven by irrigation demand) (by field, for each month)
-    read(87,*) date_text, fields(:)%curtail_frac   ! read in curtailment fractions  (by field, for each month)
+    read(86,*) date_text, fields(1:)%mar_depth     ! read in monthly MAR application depths (not driven by irrigation demand) (by field, for each month)
+    read(87,*) date_text, fields(1:)%curtail_frac   ! read in curtailment fractions  (by field, for each month)
+    if (trim(et_cor_file) /= "") read(89,*) date_text, fields(1:)%et_cor  ! read in et correction  (by field, for each month)
     do jday=1, loopdays
       read(85,*) date_text, SFR_allocation(:)%frac_subws_flow(jday)        ! read in multiplier for converting remaining subwatershed flows to SFR inflows
     end do
@@ -196,7 +203,7 @@ PROGRAM SWBM
       daily%mar_depth = fields(:)%mar_depth / numdays
       ! Currently here - checking pET for native veg land use
       !write(*,'(A25,F4.2,F4.2)') "natveg k_c and kc_mult: ",crops(4)%daily_kc, crops(4)%kc_mult
-      daily%pET=ETo * crops(fields%landcover_id)%daily_kc * crops(fields%landcover_id)%kc_mult                        ! Set ET to current value for the day
+      daily%pET=ETo * crops(fields%landcover_id)%daily_kc * crops(fields%landcover_id)%kc_mult * fields%et_cor    ! Set ET to current value for the day
       
       if(irrigating .eqv. .false.) then  ! if not irrigating yet, check number of fields irrigating
           if(sum(fields%irr_flag)>=opt%NEIGHBOR_RULE) then  ! Under the neighbor-irrigating rule,

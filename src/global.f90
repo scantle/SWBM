@@ -27,6 +27,7 @@ module m_global
   ! Optional Files
   character(100)   :: ditch_file
   character(100)   :: et_zones_file
+  character(100)   :: et_cor_file
   character(100)   :: MAR_depth_file
   character(100)   :: curtail_frac_file
   character(100)   :: water_mover_file
@@ -68,6 +69,7 @@ module m_global
   agwell_locs_file    = ""
   ditch_file          = ""
   et_zones_file       = ""
+  et_cor_file         = ""
   MAR_depth_file      = ""
   curtail_frac_file   = ""
   recharge_zones_file = ""
