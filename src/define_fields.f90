@@ -306,4 +306,4 @@ subroutine IRR2CP(WY)
 
 end subroutine IRR2CP
 
-end MODULE
+end MODULE define_fields

@@ -814,7 +814,7 @@ MODULE SWBM_output
     ntab = count(SFR_Routing(:)%tabunit > 0)
     
     ! Early exit if daily is off or none of the streams are using tabfiles.
-    if(daily_sw==.false. .or. ntab < 1) return
+    if(daily_sw .eqv. .false. .or. ntab < 1) return
     
     if (im==1) then
       ! Start tabfiles
@@ -979,4 +979,4 @@ SUBROUTINE write_UCODE_SFR_template(im, month, nSegs, model_name, total_days, da
 
 !  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   
-END MODULE
+END MODULE SWBM_output

@@ -36,10 +36,10 @@ module m_read_main_input
     end do
     call close_file(reader)
 
-    if (has_necessary_blocks(1)==.false.) call error_handler(1,reader%file,"Missing Discretization Block!")
-    if (has_necessary_blocks(2)==.false.) call error_handler(1,reader%file,"Missing Options Block!")
-    !if (has_necessary_blocks(3)==.false.) call error_handler(1,reader%file,"Missing Parameters Block!")  ! Currently no parameters are specified here!
-    if (has_necessary_blocks(4)==.false.) call error_handler(1,reader%file,"Missing Input_Files Block!")
+    if (has_necessary_blocks(1) .eqv. .false.) call error_handler(1,reader%file,"Missing Discretization Block!")
+    if (has_necessary_blocks(2) .eqv. .false.) call error_handler(1,reader%file,"Missing Options Block!")
+    !if (has_necessary_blocks(3) .eqv. .false.) call error_handler(1,reader%file,"Missing Parameters Block!")  ! Currently no parameters are specified here!
+    if (has_necessary_blocks(4) .eqv. .false.) call error_handler(1,reader%file,"Missing Input_Files Block!")
     
     if ((trim(specwell_locs_file) == "".and.nSpecWells>0).or.(trim(specwell_vol_file) == "".and.nSpecWells>0)) then
       call error_handler(1,reader%file,"Must specify SPECWELL_LOCS and SPECWELL_RATES input files if NSPECWELLS > 0")
@@ -87,7 +87,7 @@ module m_read_main_input
 
     select case(trim(block_id))
       case("THING")
-        if (has_necessary_blocks(2)==.false.) call error_handler(2,reader%file,"ERROR")
+        if (has_necessary_blocks(2).eqv. .false.) call error_handler(2,reader%file,"ERROR")
       case DEFAULT
       ! Do nothing
     end select
@@ -152,7 +152,7 @@ module m_read_main_input
       end select
     end do
     ! Really simple input enforcement
-    if (any(has_necessary_items==.false.)) then
+    if (any(has_necessary_items .eqv. .false.)) then
       call error_handler(1,reader%file,"Missing items in Discretization Block")
     end if
   end subroutine read_DISCRETIZATION_block
@@ -266,7 +266,7 @@ module m_read_main_input
       end select
     end do
     ! Really simple input enforcement
-    if (any(has_necessary_items==.false.)) then
+    if (any(has_necessary_items .eqv. .false.)) then
       call error_handler(1,reader%file,"Missing required items in Input_Files Block")
     end if
 

@@ -31,7 +31,7 @@ MODULE irrigation
     !  read(10,*) 
     !ENDDO
     ! Find header end - to the best of my knowledge, all possible options
-    do while (past_header /= .true.)
+    do while (past_header .neqv. .true.)
       read(10, '(a60)') line
       line = adjustl(line)
       if (line(1:1)=='#' .or. index(line, 'REACHINPUT')>0 .or. index(line, 'TRANSROUTE')>0 .or. index(line, 'TABFILES')>0) then
@@ -337,5 +337,5 @@ MODULE irrigation
   
   END SUBROUTINE water_budget
   
-END MODULE
+END MODULE irrigation
 
