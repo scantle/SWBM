@@ -12,6 +12,8 @@ MODULE SWBM_output
   REAL, ALLOCATABLE, DIMENSION(:) :: landcover_total_irr, landcover_sw_irr, landcover_gw_irr, landcover_area
   REAL, ALLOCATABLE, DIMENSION(:) :: landcover_effprecip, landcover_pET, landcover_deficiency
   REAL, ALLOCATABLE, DIMENSION(:) :: landcover_recharge, landcover_aET, landcover_delta_s
+  REAL, ALLOCATABLE, DIMENSION(:) :: subws_sw_irr
+
   integer,parameter               :: tab_iunit_start=667
   TYPE(budget_terms), ALLOCATABLE, DIMENSION(:) :: stream_WB
    
@@ -121,7 +123,8 @@ MODULE SWBM_output
     open(unit=130, file='ET_Active_Days.dat')                       
     write(130,'("Number of Days ET is Active in each polyon")')    
   
-    ! open(unit=101, file='monthly_SW_irr_by_stream.dat')        
+    open(unit=101, file='monthly_SW_irr_by_stream.dat')        
+    write(101,'(999A30)')'Stress_Period  ',seg_name(:)
     ! open(unit=102, file='monthly_GW_irr_by_stream.dat')      
     ! open(unit=103, file='monthly_total_irr_by_stream.dat')     
     ! open(unit=104, file='monthly_pET_by_stream.dat')     
@@ -215,10 +218,13 @@ MODULE SWBM_output
     	ALLOCATE(landcover_deficiency(nlandcover))
     	ALLOCATE(landcover_recharge(nlandcover))
     	ALLOCATE(landcover_delta_s(nlandcover))
+        
+        ALLOCATE(subws_sw_irr(nSubws))    
+
     endif
 
     
-    ! subwnsw           = 0.
+     subws_sw_irr           = 0.
     ! subwat_gw_irr         = 0.                            
     ! subwat_tot_irr        = 0.                         
     ! subwnevapo        = 0.                          
@@ -252,8 +258,8 @@ MODULE SWBM_output
       landcover_delta_s(landcover_id) = landcover_delta_s(landcover_id) + monthly(i)%change_in_storage_vol
       landcover_area(landcover_id) = landcover_area(landcover_id) + fields(i)%area 
     
-    ! subwnsw(fields(i)%subwn)         = subwnsw(fields(i)%subwn) &
-    !                                   + (monthly(i)%tot_irr_vol - monthly(i)%gw_irr_vol)
+     subws_sw_irr(fields(i)%subws_ID)         = subws_sw_irr(fields(i)%subws_ID) &
+                                       + (monthly(i)%tot_irr_vol - monthly(i)%gw_irr_vol)
     ! subwat_gw_irr(fields(i)%subwn)       = subwat_gw_irr(fields(i)%subwn)       + monthly(i)%gw_irr_vol  
     ! subwat_tot_irr(fields(i)%subwn)      = subwat_tot_irr(fields(i)%subwn)      + monthly(i)%tot_irr_vol
     ! subwnevapo(fields(i)%subwn)      = subwnevapo(fields(i)%subwn)      + monthly(i)%pET_vol
@@ -296,7 +302,7 @@ MODULE SWBM_output
     enddo    
     landcover_sw_irr = landcover_total_irr - landcover_gw_irr    
                                     
-    ! write(101,'(i4,9F20.2)') month, subwnsw(:)                         
+    write(101,'(i4,9F20.2)') im, subws_sw_irr(:)                         
     ! write(102,'(i4,9F20.2)') month, subwat_gw_irr(:)                     
     ! write(103,'(i4,9F20.2)') month, subwat_tot_irr(:)                    
     ! write(104,'(i4,9F20.2)') month, subwnevapo(:)                    
