@@ -45,8 +45,7 @@ PROGRAM SWBM
   CHARACTER(30) :: filename !, wel_file
   CHARACTER(400) :: cmd
   INTEGER, DIMENSION(31) :: ET_Active
-  !LOGICAL :: MAR_active, ILR_active, daily_out_flag, inflow_is_vol, ag_wells_specified, using_neighbor_irr_rule, using_abs_irr_date, daily_sw
-  LOGICAL :: ag_wells_specified
+  !LOGICAL :: MAR_active, ILR_active, daily_out_flag, inflow_is_vol, using_neighbor_irr_rule, using_abs_irr_date, daily_sw
   REAL :: eff_precip
   
   ! New variables
@@ -76,16 +75,16 @@ PROGRAM SWBM
 
   ! Write info to log
   write(*,'(A7,I6,A14,I4,A12,I5,A14,I5,A12,I3,A10,I5)') "npoly =", npoly, "nlandcover =", nlandcover, "nAgWells =", nAgWells, &
-  "nMuniWells =", nMuniWells, "nSubws =", nSubws, "nmonths =", nmonths
+  "nSpecWells =", nSpecWells, "nSubws =", nSubws, "nmonths =", nmonths
   write(log_unit,'(A7,I6,A14,I4,A12,I5,A14,I5,A12,I3,A10,I5)') "npoly =", npoly, "nlandcover =", nlandcover, "nAgWells =", nAgWells, &
-  "nMuniWells =", nMuniWells, "nSubws =", nSubws, "nmonths =", nmonths
+  "nSpecWells =", nSpecWells, "nSubws =", nSubws, "nmonths =", nmonths
   call opt%write_options_to_log(log_unit)
   
   ! Copy template files over for writing (previously done by system_commands.txt)
   call copy_file(sfr_network_file, trim(model_name)//'.sfr')
   call copy_file(ets_template_file, trim(model_name)//'.ets')
   call copy_file(wel_template_file, trim(model_name)//'.wel')
-  if (len_trim(sfr_jtf_file) > 0) call copy_file(sfr_jtf_file, trim(model_name)//'_SFR.jtf')
+  if (trim(sfr_jtf_file) /= "") call copy_file(sfr_jtf_file, trim(model_name)//'_SFR.jtf')  ! TODO should error if WRITE_UCODE is TRUE
 
   ! Read in zone/property related files before time loop
   ALLOCATE(rch_zones(nrows,ncols))
@@ -122,32 +121,38 @@ PROGRAM SWBM
   CALL read_landcover_table(nlandcover)
 
   CALL readpoly(npoly, nrows, ncols, rch_zones)                  ! Read in field info
-  CALL initialize_wells(npoly, nAgWells, nMuniWells)             ! Read in Ag well info
+  CALL initialize_wells(npoly, nAgWells, nSpecWells)             ! Read in Ag well info
   
   !LS Read in irrigation ditch & water mover
-  if (len_trim(ditch_file)       > 0) call read_irr_ditch_input_file(ditch_file)
-  if (len_trim(water_mover_file) > 0) call read_water_mover_input_file(water_mover_file)
+  if (trim(ditch_file)       /= "") call read_irr_ditch_input_file(ditch_file)
+  if (trim(water_mover_file) /= "") call read_water_mover_input_file(water_mover_file)
 
   open(unit=82, file = poly_landcover_file, status = 'old')
   read(82,*)  ! read header into nothing
 
   ! Input files specifying field-by-field, 1 per stress period values
+  open(unit=79, file=kc_frac_file, status = 'old')   
+  read(79,*)  ! read header into nothing
+  open(unit=85, file = sfr_partition_file, status = 'old')
+  read(85,*)  ! read header into nothing
   open(unit=86, file = MAR_depth_file, status = 'old')
   read(86,*)  ! read header into nothing
   open(unit=87, file = curtail_frac_file, status = 'old')
   read(87,*)  ! read header into nothing
+  if (trim(et_cor_file) /= "") then
+    open(unit=89, file=et_cor_file, status='old')
+    read(89,*)  ! read header into nothing
+  end if
+  
   ! Input files specifying 1 value per stress period
   open(unit=887,file=precip_file, status = 'old')
   !read(887,*)  ! read header into nothing                   
   open(unit=88,file=et_file, status = 'old')
   read(88,*)  ! read header into nothing
-  open(unit=79, file=kc_frac_file, status = 'old')   
-  read(79,*)  ! read header into nothing
-  open(unit=85, file = sfr_partition_file, status = 'old')
-  read(85,*)  ! read header into nothing
 
   CALL output_files(model_name)
   fields%irr_flag = 0          ! Initialize irrigating status flag array
+  fields%et_cor   = 1.0        ! ET Correction
   month = 10                   ! Initialize month variable to start in October
   simday = 0                   ! Counter of day of simulation
   total_days = sum(ndays(:))   ! Total days in simulation
@@ -158,15 +163,15 @@ PROGRAM SWBM
   do im=1, nmonths                ! Loop over each month
     numdays = ndays(im)        ! Number of days in the current month
     if (opt%DAILY_SW) loopdays = numdays  ! needed for reading daily values, when doing daily sw calcs
-    read(82,*) date_text, fields(:)%landcover_id           ! read in landuse type (by field, for each month)
+    read(82,*) date_text, fields(1:)%landcover_id           ! read in landuse type (by field, for each month)
     !write(*,*) fields(1)%landcover_id
-    read(86,*) date_text, fields(:)%mar_depth     ! read in monthly MAR application depths (not driven by irrigation demand) (by field, for each month)
-    read(87,*) date_text, fields(:)%curtail_frac   ! read in curtailment fractions  (by field, for each month)
+    read(86,*) date_text, fields(1:)%mar_depth     ! read in monthly MAR application depths (not driven by irrigation demand) (by field, for each month)
+    read(87,*) date_text, fields(1:)%curtail_frac   ! read in curtailment fractions  (by field, for each month)
+    if (trim(et_cor_file) /= "") read(89,*) date_text, fields(1:)%et_cor  ! read in et correction  (by field, for each month)
     do jday=1, loopdays
       read(85,*) date_text, SFR_allocation(:)%frac_subws_flow(jday)        ! read in multiplier for converting remaining subwatershed flows to SFR inflows
     end do
-    read(537,*)  date_text, ag_wells_specified, ag_wells(:)%specified_volume 
-    read(539,*) date_text, muni_wells(:)%specified_volume
+    if (nSpecWells>0) read(539,*) date_text, spec_wells(:)%specified_volume
     if (im==1) CALL initial_conditions                  ! initialize soil-water content for fields  
     if (month==10) then
       CALL zero_year           ! If October zero out yearly accumulated volume
@@ -196,14 +201,15 @@ PROGRAM SWBM
       read(79,*) date_text, crops(:)%daily_kc 
       daily%effprecip = stn_precip * fields%precip_fact
       daily%mar_depth = fields(:)%mar_depth / numdays
-      ! CUrrently here - checking pET for native veg land use
+      ! Currently here - checking pET for native veg land use
       !write(*,'(A25,F4.2,F4.2)') "natveg k_c and kc_mult: ",crops(4)%daily_kc, crops(4)%kc_mult
-      daily%pET=ETo * crops(fields%landcover_id)%daily_kc * crops(fields%landcover_id)%kc_mult                        ! Set ET to current value for the day
+      daily%pET=ETo * crops(fields%landcover_id)%daily_kc * crops(fields%landcover_id)%kc_mult * fields%et_cor    ! Set ET to current value for the day
       
       if(irrigating .eqv. .false.) then  ! if not irrigating yet, check number of fields irrigating
           if(sum(fields%irr_flag)>=opt%NEIGHBOR_RULE) then  ! Under the neighbor-irrigating rule,
             irrigating = .true.  ! if 20% of the fields are irrigating (by number, not area; 1251 total irrigated fields), set logical to true
-            write(*,'(A3,I4,A27,I2,A5,I2)') "in ", WY, ", irrigating started month ", month, " day " , jday
+            write(*,'(A,I2,A,I2,A,I4)')   " - Irrigating started: month ", month, " day " , jday, " WY ", WY
+            write(800,'(A,I2,A,I2,A,I4)') " - Irrigating started: month ", month, " day " , jday, " WY ", WY
             !write(*,*) " "
         endif
       endif
@@ -227,14 +233,13 @@ PROGRAM SWBM
       enddo           ! End of field/polygon loop
       
       CALL daily_out()                                                            ! Print Daily Output for Selected Fields
-      CALL groundwater_pumping(jday, nAgWells, npoly, numdays,im, ag_wells_specified)      ! Assign gw_irr to wells
+      CALL groundwater_pumping(jday, nAgWells, npoly, numdays,im)      ! Assign gw_irr to wells
       CALL monthly_SUM                                                            ! add daily value to monthly total (e.g., monthly%tot_irr = monthly%tot_irr + daily%tot_irr)
       CALL annual_SUM                                                             ! add daily value to annual total (e.g., yearly%tot_irr = yearly%tot_irr + daily%tot_irr)
       if (jday==numdays) then                                         
       	CALL SFR_streamflow(npoly, numdays, nSubws, nSegs, nSFR_inflow_segs, month, opt%DAILY_SW)      ! Convert remaining surface water and runoff to SFR inflows at end of the month	
         CALL water_mover_sfr(im, numdays, opt%daily_sw)
-        ann_spec_ag_vol = ann_spec_ag_vol + SUM(ag_wells%specified_volume)	      ! add monthly specified ag pumping volume to annual total
-        ann_spec_muni_vol = ann_spec_muni_vol + SUM(muni_wells%specified_volume)  ! add monthly specified volume to annual total
+        ann_spec_well_vol = ann_spec_well_vol + SUM(spec_wells%specified_volume)  ! add monthly specified volume to annual total
       endif
     enddo             ! End of day loop  
 
@@ -250,9 +255,9 @@ PROGRAM SWBM
     end if
     if (opt%write_ucode) CALL write_UCODE_SFR_template(im, month, nSegs, model_name, total_days, opt%DAILY_SW)   ! Write JTF file for UCODE
     if (opt%write_pest) CALL write_PEST_SFR_template(im, month, nSegs, model_name, total_days, opt%DAILY_SW)   ! Write JTF file for UCODE
-    ! CALL write_MODFLOW_MNW2(im, nAgWells, nMuniWells, ag_wells_specified)          
+    ! CALL write_MODFLOW_MNW2(im, nAgWells, nSpecWells, ag_wells_specified)          
     if (month==9) then
-    CALL print_annual(WY, ag_wells_specified)        ! print annual values at the end of September
+    CALL print_annual(WY)        ! print annual values at the end of September
       WY = WY +1
     endif
     month = month + 1

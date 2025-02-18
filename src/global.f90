@@ -18,17 +18,22 @@ module m_global
   character(100)   :: kc_frac_file
   character(100)   :: sfr_partition_file
   character(100)   :: poly_landcover_file
+  character(100)   :: poly_agwell_file
   character(100)   :: sfr_network_file
   character(100)   :: ets_template_file
   character(100)   :: wel_template_file
+  character(100)   :: agwell_locs_file
   
   ! Optional Files
   character(100)   :: ditch_file
   character(100)   :: et_zones_file
+  character(100)   :: et_cor_file
   character(100)   :: MAR_depth_file
   character(100)   :: curtail_frac_file
   character(100)   :: water_mover_file
   character(100)   :: sfr_jtf_file
+  character(100)   :: specwell_locs_file
+  character(100)   :: specwell_vol_file
   
   ! Output arrays
   integer,allocatable       :: daily_out_idx(:)
@@ -61,13 +66,17 @@ module m_global
   sfr_network_file    = ""
   ets_template_file   = ""
   wel_template_file   = ""
+  agwell_locs_file    = ""
   ditch_file          = ""
   et_zones_file       = ""
+  et_cor_file         = ""
   MAR_depth_file      = ""
   curtail_frac_file   = ""
   recharge_zones_file = ""
   water_mover_file    = ""
   sfr_jtf_file        = ""
+  specwell_locs_file  = ""
+  specwell_vol_file = ""
   
   end subroutine init_globals
   

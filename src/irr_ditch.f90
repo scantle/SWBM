@@ -259,7 +259,7 @@ module ditch_module
       ! Handle EOF
       if (ierr /= 0) then
         ! TODO Add error handling module/subroutine
-        write(*,'(a,i)') "Error - End of file reached unexpectedly on unit", unit
+        write(*,'(a,i3)') "Error - End of file reached unexpectedly on unit", unit
         stop
       end if
       compare = adjustl(line)

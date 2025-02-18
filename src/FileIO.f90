@@ -96,7 +96,7 @@ module m_file_io
     logical      :: isopen
     isopen = .true.
     unit_no = max_unit
-    do while (isopen==.true.)
+    do while (isopen)
       unit_no = unit_no + 1
       inquire(unit=unit_no, opened=isopen)
     end do
