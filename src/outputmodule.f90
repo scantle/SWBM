@@ -584,7 +584,7 @@ MODULE SWBM_output
      
      ! surgery - passing deficiency
      ET_matrix_out = 0.
-     Avg_Ref_ET = Total_Ref_ET/real(numdays)                                                   ! Calculate average Reference ET for populating ET package
+     Avg_Ref_ET = monthly(ip)%deficiency/real(numdays)                                                   ! Calculate average Reference ET for populating ET package
      
      do ip=1,npoly
        ET_fraction(ip) = monthly(ip)%ET_active / real(numdays) 
