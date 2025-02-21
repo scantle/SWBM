@@ -577,19 +577,18 @@ MODULE SWBM_output
      INTEGER, INTENT(IN) :: im,nrows,ncols, npoly !,month
      INTEGER, INTENT(IN) :: rch_zones(nrows,ncols), ET_Zone_Cells(nrows,ncols) !,nday(0:11)
      REAL, INTENT(IN) :: Total_Ref_ET
-     REAL :: Avg_Ref_ET
      REAL, DIMENSION(npoly) :: ET_fraction
      INTEGER :: ip, numdays
      REAL, DIMENSION(nrows,ncols) :: ET_Cells_ex_depth(nrows,ncols), ET_matrix_out !Extinction_depth_matrix,
      
      ! surgery - passing deficiency
      ET_matrix_out = 0.
-     Avg_Ref_ET = monthly(ip)%deficiency/real(numdays)                                                   ! Calculate average Reference ET for populating ET package
+     !Avg_Ref_ET = Total_Ref_ET/real(numdays)                                                   ! Calculate average Reference ET for populating ET package
      
      do ip=1,npoly
-       ET_fraction(ip) = monthly(ip)%ET_active / real(numdays) 
+       !ET_fraction(ip) = monthly(ip)%ET_active / real(numdays) 
        where (rch_zones(:,:) == ip)
-         ET_matrix_out(:,:) = Avg_Ref_ET * (1 - ET_fraction(ip))  ! Scale Average monthly ET by the number of days ET was not active on the field.
+         ET_matrix_out(:,:) = monthly(ip)%deficiency/real(numdays) !* (1 - ET_fraction(ip))  ! Scale Average monthly ET by the number of days ET was not active on the field.
        end where
      enddo
 
