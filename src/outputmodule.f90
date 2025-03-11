@@ -780,10 +780,10 @@ MODULE SWBM_output
         if(SFR_Routing(i)%FLOW<0) SFR_Routing(i)%FLOW = 0.0   ! Remove negative flow rates caused by rounding errors
         !write(*,'(A20,I3,A3,es10.2)') "SFR_Routing%FLOW", i," : ", SFR_Routing(i)%FLOW
 
-        if(SFR_Routing(i)%IUPSEG == 0) then ! If no upstream segment (i.e. segment is an inflow segment)
+        if(SFR_Routing(i)%IUPSEG == 0) then ! If this segment does NOT originate as a diversion from an upstream segment 
           write(213,'(I3,I5,I5,I5,2es14.6,A8,F5.3)') SFR_Routing(i)%NSEG, SFR_Routing(i)%ICALC, SFR_Routing(i)%OUTSEG,&
                 SFR_Routing(i)%IUPSEG, SFR_Routing(i)%FLOW, SFR_Routing(i)%RUNOFF,'  0  0  ', SFR_Routing(i)%MANNING_N
-        elseif(SFR_Routing(i)%IUPSEG > 0) then ! If upstream segment exists
+        elseif(SFR_Routing(i)%IUPSEG > 0) then ! If this segment DOES originate as a diversion, from upstream segment IUPSEG
           write(213,'(I3,I5,I5,I5,I3,2es14.6,A8,F5.3)')SFR_Routing(i)%NSEG, SFR_Routing(i)%ICALC,& 
             SFR_Routing(i)%OUTSEG, SFR_Routing(i)%IUPSEG, SFR_Routing(i)%IPRIOR, SFR_Routing(i)%FLOW, &
             SFR_Routing(i)%RUNOFF,'  0  0  ', SFR_Routing(i)%MANNING_N
