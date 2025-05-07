@@ -52,12 +52,12 @@ END TYPE
 
 TYPE(polygon), ALLOCATABLE, DIMENSION(:) :: fields
 TYPE(accumulator), ALLOCATABLE, DIMENSION(:):: previous, monthly, daily, yearly
-TYPE(well), ALLOCATABLE, DIMENSION(:) :: ag_wells, spec_wells
+TYPE(well), ALLOCATABLE, DIMENSION(:) :: ag_wells, spec_wells, mfr_wells
 TYPE(crop_table), ALLOCATABLE, DIMENSION(:) :: crops
 TYPE(surface_water), ALLOCATABLE, DIMENSION(:) :: surfaceWater
 TYPE(subws_flow_partitioning), ALLOCATABLE, DIMENSION(:) :: SFR_allocation
 TYPE(Stream_Segments), ALLOCATABLE, DIMENSION(:) :: SFR_Routing
-INTEGER :: npoly, nrotations, nAgWells, nSpecWells, ip, nlandcover
+INTEGER :: npoly, nrotations, nAgWells, nSpecWells, nMFRWells, ip, nlandcover
 REAL :: ann_spec_well_vol
 
 contains
@@ -174,10 +174,10 @@ end subroutine init_accumulator
 
 ! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-SUBROUTINE initialize_wells(npoly, nAgWells, nSpecWells)
+SUBROUTINE initialize_wells(npoly, nAgWells, nSpecWells, nMFRWells)
   use m_global, only: agwell_locs_file, poly_agwell_file, specwell_locs_file, specwell_vol_file
 
-  INTEGER, INTENT(IN) :: npoly, nAgWells, nSpecWells
+  INTEGER, INTENT(IN) :: npoly, nAgWells, nSpecWells, nMFRWells
   INTEGER, DIMENSION(nAgWells) :: ag_well_id
   INTEGER, DIMENSION(nSpecWells) :: spec_well_id
   INTEGER :: i, j, poly_id, well_id
@@ -185,6 +185,7 @@ SUBROUTINE initialize_wells(npoly, nAgWells, nSpecWells)
 
   ALLOCATE(ag_wells(nAgWells))
   ALLOCATE(spec_wells(nSpecWells))
+  ALLOCATE(mfr_wells(nMFRWells))
 
   open(unit=10, file=agwell_locs_file, status="old")
   read(10,*)
@@ -235,6 +236,16 @@ SUBROUTINE initialize_wells(npoly, nAgWells, nSpecWells)
     spec_wells%specified_volume = 0.0
     spec_wells%specified_rate   = 0.0
   end if
+  
+  ! If MFR wells are active
+  if (nMFRWells>0) then
+    ! Read in cells and catchments
+  
+    ! Read in multipliers (if active)
+  
+
+  end if
+  
 END subroutine initialize_wells
 
 ! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

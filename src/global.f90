@@ -34,6 +34,9 @@ module m_global
   character(100)   :: sfr_jtf_file
   character(100)   :: specwell_locs_file
   character(100)   :: specwell_vol_file
+  character(100)   :: mfr_wells_file
+  character(100)   :: mfr_catchment_vols_file
+  character(100)   :: mfr_catchment_mult_file
   
   ! Output arrays
   integer,allocatable       :: daily_out_idx(:)
@@ -76,7 +79,10 @@ module m_global
   water_mover_file    = ""
   sfr_jtf_file        = ""
   specwell_locs_file  = ""
-  specwell_vol_file = ""
+  specwell_vol_file   = ""
+  mfr_wells_file      = ""
+  mfr_catchment_vols_file = ""
+  mfr_catchment_mult_file = ""
   
   end subroutine init_globals
   

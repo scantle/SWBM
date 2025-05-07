@@ -127,7 +127,7 @@ PROGRAM SWBM
   CALL read_landcover_table(nlandcover)
 
   CALL readpoly(npoly, nrows, ncols, rch_zones)                  ! Read in field info
-  CALL initialize_wells(npoly, nAgWells, nSpecWells)             ! Read in Ag well info
+  CALL initialize_wells(npoly, nAgWells, nSpecWells, nMFRWells)  ! Read in Ag well info
   
   !LS Read in irrigation ditch & water mover
   if (trim(ditch_file)       /= "") call read_irr_ditch_input_file(ditch_file)

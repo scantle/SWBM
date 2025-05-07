@@ -98,11 +98,11 @@ module m_read_main_input
 
   subroutine read_DISCRETIZATION_block(reader)
     use m_global, only: nmonths, WYstart, nrows, ncols, model_name, nSFR_inflow_segs
-    use define_fields, only: npoly, nAgWells, nSpecWells, nlandcover
+    use define_fields, only: npoly, nAgWells, nSpecWells, nMFRWells, nlandcover
     use irrigation, only: nsubws
     implicit none
     type(t_file_reader), pointer    :: reader
-    logical                         :: has_necessary_items(11) = .false.
+    logical                         :: has_necessary_items(12) = .false.
 
     ! Standard file reader variables
     integer                    :: status, length
@@ -135,18 +135,21 @@ module m_read_main_input
         case("NSPECWELLS")
           nSpecWells = item2int(strings, 2)
           has_necessary_items(7) = .true.
+        case("NMFRWELLS")
+          nMFRWells = item2int(strings, 2)
+          has_necessary_items(8) = .true.          
         case("NSFR_INFLOW_SEGS")
           nSFR_inflow_segs = item2int(strings, 2)
-          has_necessary_items(8) = .true.
+          has_necessary_items(9) = .true.
         case("NAME","MFNAME")
           call item2char(strings, 2, model_name)
-          has_necessary_items(9) = .true.
+          has_necessary_items(10) = .true.
         case("NROWS")
           nrows = item2int(strings, 2)
-          has_necessary_items(10) = .true.
+          has_necessary_items(11) = .true.
         case("NCOLS")
           ncols = item2int(strings, 2)
-          has_necessary_items(11) = .true.
+          has_necessary_items(12) = .true.
         case DEFAULT
           call error_handler(1,reader%file,"Unknown Discretization option: " // trim(id))
       end select
@@ -246,6 +249,12 @@ module m_read_main_input
           call item2char(strings, 2, specwell_locs_file)
         case("SPECWELL_VOL")
           call item2char(strings, 2, specwell_vol_file)
+        case("MFRWELL_LOCS")
+          call item2char(strings, 2, mfr_wells_file)
+        case("MFRWELL_RATES")
+          call item2char(strings, 2, mfr_catchment_vols_file)
+        case("MFRWELL_MULT")
+          call item2char(strings, 2, mfr_catchment_mult_file)
         case("SFR_NETWORK_JTF")
           call item2char(strings, 2, sfr_jtf_file)
           has_necessary_items(8) = .true.
