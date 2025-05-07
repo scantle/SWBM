@@ -59,6 +59,7 @@ PROGRAM SWBM
   call io_initialize()
   call opt%initialize()
   call initialize_irr_ditch()
+  n_wel_param = 0
   
   ! Get command line arguments, returns main input file:
   call get_command_args(main_input_file)
@@ -93,7 +94,12 @@ PROGRAM SWBM
   filename = trim(model_name) // '.wel'
   open (unit=536, file= filename, status="old")     
   read(536,*) ! Read heading line into nothing
-  read(536,*) text_dummy, n_wel_param  ! Read "PARAMETER" as dummy text; read in number of well parameters (for printing WEL file later)
+  ! Optional - Read "PARAMETER" as dummy text; read in number of well parameters (for printing WEL file later)
+  read(536,*) text_dummy
+  if (index(text_dummy, "PARAMETER")>0) then
+    backspace(536)
+    read(536,*) text_dummy, n_wel_param  
+  end if
   close(536)
 
   open(unit=10, file='stress_period_days.txt', status = 'old')

@@ -396,16 +396,7 @@ MODULE SWBM_output
   filename = trim(model_name) // '.wel'
 
   open(unit=536, file= filename, Access = 'append', status='old')
-  if (month == 10 .or. month == 11 .or. month == 12 .or. month == 1 .or. &                              ! If October-March
-      month == 2 .or. month == 3) then
-    write(536,'(I10,I10,A28,I4)') nwells_out, n_wel_param, '               Stress Period',im         ! Only MFR is active, subtract number of ditches represented 
-  else if (month == 4 .or. month == 5) then                                                            ! If April-May
-    write(536,'(I10,I10,A28,I4)') nwells_out, n_wel_param, '               Stress Period',im           ! MFR and Ditches are active, use all WEL parameters
-  else if (month == 6 .or. month == 7) then                                                           ! If June - July
-    write(536,'(I10,I10,A28,I4)') nwells_out, n_wel_param-7, '               Stress Period',im         ! Only Ditches are active, subtract number of MFR segments represented
-  else if (month == 8 .or. month == 9) then                                                           ! If August-September
-    write(536,'(I10,I10,A28,I4)') nwells_out, n_wel_param-7, '               Stress Period',im         ! Only Ditches are active, subtract number of MFR and Ditch segments represented                                              
-  end if
+  write(536,'(I10,I10,A28,I4)') nwells_out, n_wel_param, '               Stress Period',im 
     
   do i=1,nAgWells
   	!well_idx = fields(i)%well_idx  ! Results in duplicated fields -LS
@@ -423,26 +414,8 @@ MODULE SWBM_output
     
     !LS Write ditch leakage as injection
   call write_ditch_wells(536, month)
-    
-  !if (month == 10 .or. month == 11 .or. month == 12 .or. month == 1 .or. &                              ! If October-March MFR is active
-  !    month == 2 .or. month == 3) then
-  if (month < 6 .or. month > 9) then
-    write(536,*)'  MFR5'
-    write(536,*)'  MFR6'
-    write(536,*)'  MFR7'
-    write(536,*)'  MFR8'
-    write(536,*)'  MFR9'
-    write(536,*)'  MFR10'
-    write(536,*)'  MFR11'
-  !else if (month == 4 .or. month == 5) then                                                            ! If April-May MFR and Ditches are active
-  !  write(536,*)'  MFR5'                                            
-  !  write(536,*)'  MFR6'
-  !  write(536,*)'  MFR7'
-  !  write(536,*)'  MFR8'
-  !  write(536,*)'  MFR9'
-  !  write(536,*)'  MFR10'
-  !  write(536,*)'  MFR11'
-  end if
+  
+  ! TODO: MFR cells
   
   close(536)
   
