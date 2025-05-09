@@ -22,7 +22,7 @@ END TYPE
 
 TYPE well
     INTEGER :: layer, well_row, well_col, well_id
-    REAL :: coordx, coordy, top_scrn_z, bot_scrn_z
+    REAL :: coordx, coordy, top_scrn_z, bot_scrn_z, rate_mult
     REAL :: daily_vol, monthly_vol, annual_vol, monthly_rate, specified_volume, specified_rate
     CHARACTER(50) :: well_name
 END TYPE
@@ -57,7 +57,8 @@ TYPE(crop_table), ALLOCATABLE, DIMENSION(:) :: crops
 TYPE(surface_water), ALLOCATABLE, DIMENSION(:) :: surfaceWater
 TYPE(subws_flow_partitioning), ALLOCATABLE, DIMENSION(:) :: SFR_allocation
 TYPE(Stream_Segments), ALLOCATABLE, DIMENSION(:) :: SFR_Routing
-INTEGER :: npoly, nrotations, nAgWells, nSpecWells, nMFRWells, ip, nlandcover
+INTEGER :: npoly, nrotations, nAgWells, nSpecWells, nMFRWells, ip, nlandcover, nMFRcatchments
+INTEGER, ALLOCATABLE :: mfr_catchments(:), mfr_catch2well(:,:), mfr_catch_nwells(:)
 REAL :: ann_spec_well_vol
 
 contains
@@ -175,17 +176,28 @@ end subroutine init_accumulator
 ! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 SUBROUTINE initialize_wells(npoly, nAgWells, nSpecWells, nMFRWells)
-  use m_global, only: agwell_locs_file, poly_agwell_file, specwell_locs_file, specwell_vol_file
+  use m_global, only: agwell_locs_file, poly_agwell_file, specwell_locs_file, &
+                      specwell_vol_file, mfr_wells_file, mfr_catchment_mult_file
+  use m_error_handler, only: error_handler
 
   INTEGER, INTENT(IN) :: npoly, nAgWells, nSpecWells, nMFRWells
   INTEGER, DIMENSION(nAgWells) :: ag_well_id
   INTEGER, DIMENSION(nSpecWells) :: spec_well_id
-  INTEGER :: i, j, poly_id, well_id
-  CHARACTER(20) :: dummy
+  INTEGER :: i, j, poly_id, well_id, catch, catch_id
+  REAL    :: mult
+  logical :: new_catch
+  CHARACTER(50) :: dummy
 
   ALLOCATE(ag_wells(nAgWells))
   ALLOCATE(spec_wells(nSpecWells))
-  ALLOCATE(mfr_wells(nMFRWells))
+  ALLOCATE(mfr_wells(nMFRWells),                &
+           mfr_catchments(nMFRWells),           &
+           mfr_catch2well(nMFRWells,nMFRWells), &
+           mfr_catch_nwells(nMFRWells))
+           
+  nMFRcatchments = 0
+  mfr_catchments = -999
+  mfr_catch_nwells = 0
 
   open(unit=10, file=agwell_locs_file, status="old")
   read(10,*)
@@ -239,11 +251,47 @@ SUBROUTINE initialize_wells(npoly, nAgWells, nSpecWells, nMFRWells)
   
   ! If MFR wells are active
   if (nMFRWells>0) then
-    ! Read in cells and catchments
-  
+    ! Read in cells and catchments (catchments are stored as well_ids)
+    open(unit=10, file=mfr_wells_file, status="old")
+    read(10,*) ! Skip header
+    do i=1, nMFRWells
+      read(10,*) mfr_wells(i)%well_row, mfr_wells(i)%well_col, mfr_wells(i)%well_id
+      ! Is this a new catchment?
+      new_catch = .true.
+      do j=1, nMFRcatchments
+        if (mfr_wells(i)%well_id == mfr_catchments(j)) then
+          new_catch = .false.
+          mfr_catch_nwells(j) = mfr_catch_nwells(j) + 1
+          mfr_catch2well(mfr_catch_nwells(j), j) = i
+        end if
+      end do
+      if (new_catch) then
+        nMFRcatchments = nMFRcatchments + 1
+        mfr_catchments(nMFRcatchments)   = mfr_wells(i)%well_id
+        mfr_catch_nwells(nMFRcatchments) = mfr_catch_nwells(nMFRcatchments) + 1      
+        mfr_catch2well(mfr_catch_nwells(nMFRcatchments), nMFRcatchments)   = i
+      end if
+    end do
+    close(10)
+    
     ! Read in multipliers (if active)
-  
-
+    if (trim(mfr_catchment_mult_file) /= "") then
+      open(unit=10, file=mfr_catchment_mult_file, status="old")
+      do i=1, nMFRcatchments
+        read(10,*) catch, mult
+        catch_id = findloc(mfr_catchments, catch, dim=1)
+        if (catch_id==0) then
+          write(dummy,'(a)') catch
+          call error_handler(1,filename=trim(mfr_catchment_mult_file),opt_msg='Invalid catchment: '//trim(dummy))
+        end if
+        do j=1, mfr_catch_nwells(catch_id)
+          mfr_wells(mfr_catch2well(j, catch_id))%rate_mult = mult
+        end do
+      end do
+      close(10)
+    else
+      mfr_wells(1:)%rate_mult = 1.0
+    end if
   end if
   
 END subroutine initialize_wells
