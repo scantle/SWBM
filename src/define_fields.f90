@@ -22,7 +22,7 @@ END TYPE
 
 TYPE well
     INTEGER :: layer, well_row, well_col, well_id
-    REAL :: coordx, coordy, top_scrn_z, bot_scrn_z, rate_mult
+    REAL :: coordx, coordy, top_scrn_z, bot_scrn_z
     REAL :: daily_vol, monthly_vol, annual_vol, monthly_rate, specified_volume, specified_rate
     CHARACTER(50) :: well_name
 END TYPE
@@ -57,8 +57,8 @@ TYPE(crop_table), ALLOCATABLE, DIMENSION(:) :: crops
 TYPE(surface_water), ALLOCATABLE, DIMENSION(:) :: surfaceWater
 TYPE(subws_flow_partitioning), ALLOCATABLE, DIMENSION(:) :: SFR_allocation
 TYPE(Stream_Segments), ALLOCATABLE, DIMENSION(:) :: SFR_Routing
-INTEGER :: npoly, nrotations, nAgWells, nSpecWells, nMFRWells, ip, nlandcover, nMFRcatchments
-INTEGER, ALLOCATABLE :: mfr_catchments(:), mfr_catch2well(:,:), mfr_catch_nwells(:)
+INTEGER,SAVE :: npoly, nrotations, nAgWells, nSpecWells, nMFRWells, ip, nlandcover, nMFRcatchments
+INTEGER, ALLOCATABLE :: mfr_catch_mult(:)
 REAL :: ann_spec_well_vol
 
 contains
@@ -177,27 +177,28 @@ end subroutine init_accumulator
 
 SUBROUTINE initialize_wells(npoly, nAgWells, nSpecWells, nMFRWells)
   use m_global, only: agwell_locs_file, poly_agwell_file, specwell_locs_file, &
-                      specwell_vol_file, mfr_wells_file, mfr_catchment_mult_file
+                      specwell_vol_file, mfr_wells_file, mfr_catchment_mult_file, &
+                      mfr_catchment_vols_file
+  use m_file_io, only: t_file_reader, open_file_reader, item2int
+  use m_vstringlist
+  use m_vstring
   use m_error_handler, only: error_handler
 
-  INTEGER, INTENT(IN) :: npoly, nAgWells, nSpecWells, nMFRWells
-  INTEGER, DIMENSION(nAgWells) :: ag_well_id
-  INTEGER, DIMENSION(nSpecWells) :: spec_well_id
-  INTEGER :: i, j, poly_id, well_id, catch, catch_id
-  REAL    :: mult
-  logical :: new_catch
-  CHARACTER(50) :: dummy
+  INTEGER, INTENT(IN)         :: npoly, nAgWells, nSpecWells, nMFRWells
+  INTEGER                     :: ag_well_id(nAgWells)
+  INTEGER                     :: spec_well_id(nSpecWells)
+  INTEGER,allocatable         :: volfile_catchments(:)
+  INTEGER                     :: i, j, ier, poly_id, well_id, catch, catch_id
+  REAL                        :: mult
+  CHARACTER(50)               :: dummy
+  type(t_file_reader),pointer :: f
+  type(t_vstringlist)         :: strings
 
   ALLOCATE(ag_wells(nAgWells))
   ALLOCATE(spec_wells(nSpecWells))
-  ALLOCATE(mfr_wells(nMFRWells),                &
-           mfr_catchments(nMFRWells),           &
-           mfr_catch2well(nMFRWells,nMFRWells), &
-           mfr_catch_nwells(nMFRWells))
+  ALLOCATE(mfr_wells(nMFRWells))
            
   nMFRcatchments = 0
-  mfr_catchments = -999
-  mfr_catch_nwells = 0
 
   open(unit=10, file=agwell_locs_file, status="old")
   read(10,*)
@@ -251,50 +252,82 @@ SUBROUTINE initialize_wells(npoly, nAgWells, nSpecWells, nMFRWells)
   
   ! If MFR wells are active
   if (nMFRWells>0) then
-    ! Read in cells and catchments (catchments are stored as well_ids)
+    ! Read in catchments from volume file, this will be our internal catchment index (stored in well_id)
+    f => open_file_reader(mfr_catchment_vols_file)
+    call f%next_item(ier, strings)
+    ! subset strings
+    strings = vstrlist_range(strings, 2, vstrlist_length(strings))
+    nMFRcatchments = vstrlist_length(strings)
+    allocate(volfile_catchments(nMFRcatchments), mfr_catch_mult(nMFRcatchments))
+    mfr_catch_mult = 1.0
+    do i=1, nMFRcatchments
+      volfile_catchments(i) = item2int(strings,i)
+    end do
+    call f%close_file()
+  
+    ! Read in cells and catchments
     open(unit=10, file=mfr_wells_file, status="old")
     read(10,*) ! Skip header
     do i=1, nMFRWells
-      read(10,*) mfr_wells(i)%well_row, mfr_wells(i)%well_col, mfr_wells(i)%well_id
-      ! Is this a new catchment?
-      new_catch = .true.
-      do j=1, nMFRcatchments
-        if (mfr_wells(i)%well_id == mfr_catchments(j)) then
-          new_catch = .false.
-          mfr_catch_nwells(j) = mfr_catch_nwells(j) + 1
-          mfr_catch2well(mfr_catch_nwells(j), j) = i
-        end if
-      end do
-      if (new_catch) then
-        nMFRcatchments = nMFRcatchments + 1
-        mfr_catchments(nMFRcatchments)   = mfr_wells(i)%well_id
-        mfr_catch_nwells(nMFRcatchments) = mfr_catch_nwells(nMFRcatchments) + 1      
-        mfr_catch2well(mfr_catch_nwells(nMFRcatchments), nMFRcatchments)   = i
-      end if
+      read(10,*) mfr_wells(i)%well_row, mfr_wells(i)%well_col, catch
+      catch_id = findloc(volfile_catchments, catch, dim=1)
+      write(mfr_wells(i)%well_name, '(i0)') catch
+      if (catch_id==0) then
+        call error_handler(1,filename=trim(mfr_wells_file),opt_msg='Invalid catchment: '//trim(mfr_wells(i)%well_name))
+      endif
+      mfr_wells(i)%well_id = catch_id
     end do
+    mfr_wells%specified_volume = 0.0
+    mfr_wells%specified_rate   = 0.0
     close(10)
     
     ! Read in multipliers (if active)
-    if (trim(mfr_catchment_mult_file) /= "") then
+    if (trim(mfr_catchment_mult_file) /= "") then    
       open(unit=10, file=mfr_catchment_mult_file, status="old")
+      read(10,*) ! Skip header
       do i=1, nMFRcatchments
         read(10,*) catch, mult
-        catch_id = findloc(mfr_catchments, catch, dim=1)
+        write(dummy, '(a)') catch
         if (catch_id==0) then
-          write(dummy,'(a)') catch
+          write(dummy, '(a)') catch
           call error_handler(1,filename=trim(mfr_catchment_mult_file),opt_msg='Invalid catchment: '//trim(dummy))
         end if
-        do j=1, mfr_catch_nwells(catch_id)
-          mfr_wells(mfr_catch2well(j, catch_id))%rate_mult = mult
-        end do
+        mfr_catch_mult(catch_id) = mult
       end do
       close(10)
-    else
-      mfr_wells(1:)%rate_mult = 1.0
     end if
+    deallocate(volfile_catchments)
   end if
   
 END subroutine initialize_wells
+
+! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+subroutine update_MFR_monthly(im, ncatch)
+  use m_global, only: mfr_catchment_vols_file
+  implicit none
+  integer,intent(in)   :: im  ! Current month
+  integer,intent(in)   :: ncatch
+  character(30)        :: date
+  integer              :: i
+  real                 :: catch_vols(ncatch)
+  
+  ! Zero out
+  mfr_wells(:)%specified_volume = 0.0
+  
+  if (im==1) then
+    ! First month - read in header, establish catchment order
+    open(unit=541, file=mfr_catchment_vols_file, status = 'old')
+    read(541, *)   ! header
+  end if
+  
+  ! Read in line values
+  read(541, *) date, catch_vols
+  
+  ! Assign to wells
+  mfr_wells(:)%specified_volume = catch_vols(mfr_wells(:)%well_id) * mfr_catch_mult(mfr_wells(:)%well_id)
+
+end subroutine update_MFR_monthly
 
 ! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 subroutine zero_month

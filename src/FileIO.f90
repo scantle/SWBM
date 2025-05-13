@@ -52,7 +52,7 @@ module m_file_io
                                             ! (notably, this is not the maximum units allowed open)
   integer                     :: log_unit   ! Unit the log file is open on
                                             ! (so IO errors can be written to it)
-  character(500)              :: line       ! For reading in lines from files
+  character(1000)              :: line       ! For reading in lines from files
   INTEGER, PARAMETER          :: dp = SELECTED_REAL_KIND(15,307)  ! 64-bit real
   integer, parameter          :: log_width=38   
   
@@ -364,7 +364,7 @@ module m_file_io
     eof = 0
     i = 0
     do while (eof == 0)
-      read(this%unit, '(a500)', iostat=ierr) line
+      read(this%unit, '(a1000)', iostat=ierr) line
       line = adjustl(line)
       ! Handle EOF
       if (IS_IOSTAT_END(ierr)) then
@@ -445,7 +445,7 @@ module m_file_io
     if (eof == 0) then
     
       ! Read string
-      read(this%unit, '(a500)', iostat=ierr) line
+      read(this%unit, '(a1000)', iostat=ierr) line
       ! TODO Error handling
       call vstring_new(line_string, trim(adjustl(line)))
       temp = vstrlist_split(line_string)
@@ -475,7 +475,7 @@ module m_file_io
     if (eof == 0) then
       do i=1, nlines    
         ! Read empty
-        read(this%unit, '(a500)', iostat=ierr)
+        read(this%unit, '(a1000)', iostat=ierr)
         ! TODO Error handling
       end do
     else
@@ -557,12 +557,12 @@ module m_file_io
           
     ! Loop through the block items and count non-comment lines
     call this%read_to_next_line(eof, skipped=total_skipped)
-    !read(this%unit, '(a500)', iostat=ierr) line
+    !read(this%unit, '(a1000)', iostat=ierr) line
     if (index(line, "END") > 0.or.eof < 0) status = 1
     do while (status == 0)
       block_len = block_len + 1
       call this%read_to_next_line(eof, skipped=skipped)
-      read(this%unit, '(a500)', iostat=ierr) line
+      read(this%unit, '(a1000)', iostat=ierr) line
       total_skipped = total_skipped + skipped + 1
       if (index(line, "END") > 0.or.eof < 0) status = 1
     end do
@@ -594,7 +594,7 @@ module m_file_io
           
     ! Loop through the block items and count non-comment lines
     call this%read_to_next_line(eof, skipped=total_skipped)
-    !read(this%unit, '(a500)', iostat=ierr) line
+    !read(this%unit, '(a1000)', iostat=ierr) line
     if (index(line, "END") > 0.or.eof < 0) status = 1
     do while (status == 0)
       block_len = block_len + 1

@@ -177,7 +177,9 @@ PROGRAM SWBM
     do jday=1, loopdays
       read(85,*) date_text, SFR_allocation(:)%frac_subws_flow(jday)        ! read in multiplier for converting remaining subwatershed flows to SFR inflows
     end do
+    ! Read specified well volumes, MFR well volumes
     if (nSpecWells>0) read(539,*) date_text, spec_wells(:)%specified_volume
+    if (nMFRWells >0) call update_MFR_monthly(im, nMFRcatchments)
     if (im==1) CALL initial_conditions                  ! initialize soil-water content for fields  
     if (month==10) then
       CALL zero_year           ! If October zero out yearly accumulated volume

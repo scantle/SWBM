@@ -364,6 +364,7 @@ MODULE SWBM_output
      
      if (jday==numdays) then
        spec_wells%specified_rate = spec_wells%specified_volume / numdays
+       mfr_wells%specified_rate = mfr_wells%specified_volume / numdays
        call water_mover_well(im, numdays, ag_wells%monthly_vol)
        write(531,'(172es20.8)') ag_wells%monthly_vol
        ag_wells%monthly_rate = ag_wells%monthly_vol / numdays
@@ -382,7 +383,7 @@ MODULE SWBM_output
   CHARACTER(20), INTENT(IN) :: model_name
   CHARACTER(30) :: filename
   !CHARACTER(24) :: wel_file
-  INTEGER :: i, well_idx, nwells_out, specwell_count
+  INTEGER :: i, well_idx, nwells_out, specwell_count, mfrwell_count
   
   specwell_count = 0
   if (nSpecWells>0) then
@@ -390,8 +391,14 @@ MODULE SWBM_output
       if (abs(spec_wells(i)%specified_rate) > 0.0) specwell_count = specwell_count + 1
     enddo
   end if
+  mfrwell_count = 0
+  if (nMFRWells>0) then
+    do i=1, nMFRWells
+      if (mfr_wells(i)%specified_rate > 0.0) mfrwell_count = mfrwell_count + 1
+    enddo
+  end if
   
-  nwells_out = nditch_wells(month) + nAgWells + specwell_count
+  nwells_out = nditch_wells(month) + nAgWells + specwell_count + mfrwell_count
   
   filename = trim(model_name) // '.wel'
 
@@ -415,7 +422,14 @@ MODULE SWBM_output
     !LS Write ditch leakage as injection
   call write_ditch_wells(536, month)
   
-  ! TODO: MFR cells
+  ! Write MFR cells as injection
+  if (nMFRWells>0) then
+    do i=1, nMFRWells
+      if (mfr_wells(i)%specified_rate > 0.0) then
+        write(536,'(3I10,ES15.3,10x,a)') 1, mfr_wells(i)%well_row, mfr_wells(i)%well_col, mfr_wells(i)%specified_rate, 'MFR - Catchment '//trim(adjustl(mfr_wells(i)%well_name))
+      endif
+    enddo
+  end if
   
   close(536)
   
