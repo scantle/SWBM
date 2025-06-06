@@ -58,7 +58,7 @@ TYPE(surface_water), ALLOCATABLE, DIMENSION(:) :: surfaceWater
 TYPE(subws_flow_partitioning), ALLOCATABLE, DIMENSION(:) :: SFR_allocation
 TYPE(Stream_Segments), ALLOCATABLE, DIMENSION(:) :: SFR_Routing
 INTEGER,SAVE :: npoly, nrotations, nAgWells, nSpecWells, nMFRWells, ip, nlandcover, nMFRcatchments
-INTEGER, ALLOCATABLE :: mfr_catch_mult(:)
+INTEGER, ALLOCATABLE :: mfr_catch_mult(:), mfr_catch_nwells(:)
 REAL :: ann_spec_well_vol
 
 contains
@@ -258,8 +258,9 @@ SUBROUTINE initialize_wells(npoly, nAgWells, nSpecWells, nMFRWells)
     ! subset strings
     strings = vstrlist_range(strings, 2, vstrlist_length(strings))
     nMFRcatchments = vstrlist_length(strings)
-    allocate(volfile_catchments(nMFRcatchments), mfr_catch_mult(nMFRcatchments))
+    allocate(volfile_catchments(nMFRcatchments), mfr_catch_mult(nMFRcatchments), mfr_catch_nwells(nMFRcatchments))
     mfr_catch_mult = 1.0
+    mfr_catch_nwells = 0.0
     do i=1, nMFRcatchments
       volfile_catchments(i) = item2int(strings,i)
     end do
@@ -276,6 +277,7 @@ SUBROUTINE initialize_wells(npoly, nAgWells, nSpecWells, nMFRWells)
         call error_handler(1,filename=trim(mfr_wells_file),opt_msg='Invalid catchment: '//trim(mfr_wells(i)%well_name))
       endif
       mfr_wells(i)%well_id = catch_id
+      mfr_catch_nwells(catch_id) = mfr_catch_nwells(catch_id) + 1
     end do
     mfr_wells%specified_volume = 0.0
     mfr_wells%specified_rate   = 0.0
@@ -323,6 +325,9 @@ subroutine update_MFR_monthly(im, ncatch)
   
   ! Read in line values
   read(541, *) date, catch_vols
+  
+  ! Divide volume by number of cells assigned to catchment
+  catch_vols = catch_vols / mfr_catch_nwells
   
   ! Assign to wells
   mfr_wells(:)%specified_volume = catch_vols(mfr_wells(:)%well_id) * mfr_catch_mult(mfr_wells(:)%well_id)

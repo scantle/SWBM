@@ -20,13 +20,14 @@ MODULE irrigation
 ! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   SUBROUTINE initialize_streams(nSubws, nSFR_inflow_segs)
+    use m_global, only: sfr_template_file, sfr_routing_file, sfr_segments_file, irr_inflows_file, non_irr_inflows_file, sfr_diversions_file
   
     INTEGER, INTENT(IN) :: nSubws, nSFR_inflow_segs
     INTEGER :: dummy, i 
     character(60)  :: line
     logical        :: past_header=.false.
     
-    open(unit=10, file='SFR_network.txt', status='old')
+    open(unit=10, file=trim(sfr_template_file), status='old')
     !DO i=1,6   ! read first 6 comments lines of SFR file into nothing
     !  read(10,*) 
     !ENDDO
@@ -45,7 +46,7 @@ MODULE irrigation
     ALLOCATE(SFR_Routing(nSegs)) ! Allocate arrays of length equal to number of SFR segments       
     ALLOCATE(SFR_allocation(nSFR_inflow_segs))                       ! Allocate array of length equal to number of segments where inflow is specified
     ALLOCATE(surfaceWater(nSubws))                                   ! Allocate array of length equal to number of subwatersheds   
-    open(unit=10, file='SFR_routing.txt', status='old')
+    open(unit=10, file=trim(sfr_routing_file), status='old')
     read(10,*) ! Read header into nothing
     DO i=1, nSegs
       read(10,*)SFR_Routing(i)%NSEG, SFR_Routing(i)%ICALC, SFR_Routing(i)%OUTSEG, SFR_Routing(i)%IUPSEG, &
@@ -55,25 +56,29 @@ MODULE irrigation
       SFR_Routing(i)%Manning_n_Param = trim(SFR_Routing(i)%Manning_n_Param)
     ENDDO
     close(10)     
-    open(unit=10, file='SFR_inflow_segments.txt', status='old') 
+    open(unit=10, file=trim(sfr_segments_file), status='old') 
     read(10,*)  ! read header into nothing
     DO i=1, nSFR_inflow_segs
   	  read(10,*) SFR_allocation(i)%subws_ID, SFR_allocation(i)%SFR_segment,&
   	  SFR_allocation(i)%subwsName, SFR_allocation(i)%streamName
     ENDDO
     close(10)
-    open(unit = 215, file = 'subwatershed_irrigation_inflows.txt', status = 'old')
+    open(unit = 215, file = trim(irr_inflows_file), status = 'old')
     read(215,*) ! Read header into nothing
-    open(unit = 216, file = 'subwatershed_nonirrigation_inflows.txt', status = 'old')
+    open(unit = 216, file = trim(non_irr_inflows_file), status = 'old')
     read(216,*) ! Read header into nothing
-    open(unit = 217, file = 'SFR_diversions.txt', status = 'old')
-    read(217,*) nSFRdiv
-    ALLOCATE(div_segs(nSFRdiv))
-    ALLOCATE(div_rate(nSFRdiv))
-    ALLOCATE(div_IPRIOR(nSFRdiv))   
-    read(217,*) (div_segs(i), i=1, nSFRdiv)   
-    read(217,*) (div_IPRIOR(i), i=1, nSFRdiv) 
-    read(217,*) (div_rate(i), i=1, nSFRdiv)   
+    if (trim(sfr_diversions_file) /= "") then
+      open(unit = 217, file = trim(sfr_diversions_file), status = 'old')
+      read(217,*) nSFRdiv
+      ALLOCATE(div_segs(nSFRdiv),div_rate(nSFRdiv),div_IPRIOR(nSFRdiv))    
+      read(217,*) (div_segs(i), i=1, nSFRdiv)   
+      read(217,*) (div_IPRIOR(i), i=1, nSFRdiv) 
+      read(217,*) (div_rate(i), i=1, nSFRdiv)   
+      close(217)
+    else
+      nSFRdiv = 0
+      ALLOCATE(div_segs(nSFRdiv),div_rate(nSFRdiv),div_IPRIOR(nSFRdiv))   
+    end if
     
   END SUBROUTINE initialize_streams
 

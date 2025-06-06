@@ -197,7 +197,7 @@ module m_read_main_input
     use m_global
     implicit none
     type(t_file_reader), pointer    :: reader
-    logical                         :: has_necessary_items(12) = .false.
+    logical                         :: has_necessary_items(16) = .false.
 
     ! Standard file reader variables
     integer                    :: status, length
@@ -224,27 +224,39 @@ module m_read_main_input
         case("KC_FRAC")
           call item2char(strings, 2, kc_frac_file)
           has_necessary_items(5) = .true.
-        case("SFR_PARTITION")
-          call item2char(strings, 2, sfr_partition_file)
-          has_necessary_items(6) = .true.
         case("POLY_LANDCOVER")
           call item2char(strings, 2, poly_landcover_file)
-          has_necessary_items(7) = .true.
+          has_necessary_items(6) = .true.
         case("POLY_AGWELL")
           call item2char(strings, 2, poly_agwell_file)
-          has_necessary_items(12) = .true.
-        case("SFR_NETWORK")
-          call item2char(strings, 2, sfr_network_file)
+          has_necessary_items(7) = .true.
+        case("SFR_NETWORK","SFR_TEMPLATE")
+          call item2char(strings, 2, sfr_template_file)
           has_necessary_items(8) = .true.
+        case("SFR_NETWORK_JTF")
+          call item2char(strings, 2, sfr_jtf_file)
+          has_necessary_items(9) = .true.
+        case("SFR_ROUTING")
+          call item2char(strings, 2, sfr_routing_file)
+          has_necessary_items(10) = .true.
+        case("SFR_SEGMENTS")
+          call item2char(strings, 2, sfr_segments_file)
+          has_necessary_items(11) = .true.
+        case("SFR_IRR_FLOWS")
+          call item2char(strings, 2, irr_inflows_file)
+          has_necessary_items(12) = .true.
+        case("SFR_NONIRR_FLOWS")
+          call item2char(strings, 2, non_irr_inflows_file)
+          has_necessary_items(13) = .true.
         case("ETS_TEMPLATE")
           call item2char(strings, 2, ets_template_file)
-          has_necessary_items(9) = .true.
+          has_necessary_items(14) = .true.
         case("WEL_TEMPLATE","WELL_TEMPLATE")
           call item2char(strings, 2, wel_template_file)
-          has_necessary_items(10) = .true.
+          has_necessary_items(15) = .true.
         case("AGWELL_LOCS")
           call item2char(strings, 2, agwell_locs_file)
-          has_necessary_items(11) = .true.
+          has_necessary_items(16) = .true.
         case("SPECWELL_LOCS")
           call item2char(strings, 2, specwell_locs_file)
         case("SPECWELL_VOL")
@@ -255,9 +267,6 @@ module m_read_main_input
           call item2char(strings, 2, mfr_catchment_vols_file)
         case("MFRWELL_MULT")
           call item2char(strings, 2, mfr_catchment_mult_file)
-        case("SFR_NETWORK_JTF")
-          call item2char(strings, 2, sfr_jtf_file)
-          has_necessary_items(8) = .true.
         case("IRR_DITCH")
           call item2char(strings, 2, ditch_file)
         case("ET_ZONE_CELLS")
