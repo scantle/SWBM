@@ -123,7 +123,7 @@ PROGRAM SWBM
   ET_Zone_Cells = 0
   if (trim(et_zones_file) /= "") call read_array_file(et_zones_file, ET_Zone_Cells, nrows, ncols)
   
-  CALL initialize_streams(nSubws, nSFR_inflow_segs)
+  CALL initialize_streams()
   CALL read_landcover_table(nlandcover)
 
   CALL readpoly(npoly, nrows, ncols, rch_zones)                  ! Read in field info
@@ -240,7 +240,7 @@ PROGRAM SWBM
       CALL monthly_SUM                                                            ! add daily value to monthly total (e.g., monthly%tot_irr = monthly%tot_irr + daily%tot_irr)
       CALL annual_SUM                                                             ! add daily value to annual total (e.g., yearly%tot_irr = yearly%tot_irr + daily%tot_irr)
       if (jday==numdays) then                                         
-      	CALL SFR_streamflow(npoly, numdays, nSubws, nSegs, nSFR_inflow_segs, month, opt%DAILY_SW)      ! Convert remaining surface water and runoff to SFR inflows at end of the month	
+      	CALL SFR_streamflow(npoly, numdays, nSubws, month, opt%DAILY_SW)      ! Convert remaining surface water and runoff to SFR inflows at end of the month	
         CALL water_mover_sfr(im, numdays, opt%daily_sw)
         ann_spec_well_vol = ann_spec_well_vol + SUM(spec_wells%specified_volume)  ! add monthly specified volume to annual total
       endif
@@ -252,12 +252,12 @@ PROGRAM SWBM
     if (opt%write_modflow) then
       CALL write_MODFLOW_RCH(im,numdays,nrows,ncols,rch_zones)
       CALL write_MODFLOW_ETS(im,numdays,nrows,ncols,rch_zones,Total_Ref_ET,ET_Zone_Cells, ET_Cells_ex_depth, npoly)
-      CALL write_MODFLOW_SFR(im, month, nSegs, model_name, total_days, opt%DAILY_SW)
-      CALL write_MODFLOW_SFR_tabfiles(im, numdays, simday, nSegs, opt%DAILY_SW)
+      CALL write_MODFLOW_SFR(im, month, nSFR_total_segs, model_name, total_days, opt%DAILY_SW)
+      CALL write_MODFLOW_SFR_tabfiles(im, numdays, simday, nSFR_total_segs, opt%DAILY_SW)
       CALL write_MODFLOW_WEL(im, month, nAgWells, n_wel_param, model_name)       
     end if
-    if (opt%write_ucode) CALL write_UCODE_SFR_template(im, month, nSegs, model_name, total_days, opt%DAILY_SW)   ! Write JTF file for UCODE
-    if (opt%write_pest) CALL write_PEST_SFR_template(im, month, nSegs, model_name, total_days, opt%DAILY_SW)   ! Write JTF file for UCODE
+    if (opt%write_ucode) CALL write_UCODE_SFR_template(im, month, nSFR_total_segs, model_name, total_days, opt%DAILY_SW)   ! Write JTF file for UCODE
+    if (opt%write_pest) CALL write_PEST_SFR_template(im, month, nSFR_total_segs, model_name, total_days, opt%DAILY_SW)   ! Write JTF file for UCODE
     ! CALL write_MODFLOW_MNW2(im, nAgWells, nSpecWells, ag_wells_specified)          
     if (month==9) then
     CALL print_annual(WY)        ! print annual values at the end of September

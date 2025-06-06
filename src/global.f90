@@ -90,6 +90,7 @@ module m_global
   mfr_wells_file          = ""
   mfr_catchment_vols_file = ""
   mfr_catchment_mult_file = ""
+  sfr_diversions_file     = ""
   
   end subroutine init_globals
   

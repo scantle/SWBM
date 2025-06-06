@@ -507,7 +507,7 @@ MODULE SWBM_output
        unit_num = 599+i
        !'field_id  effective_precip  streamflow  SW_irrig  GW_irr  total_irr  rch  run  swc  pET aET  deficiency  residual  field_capacity  subws_ID  SWBM_LU  landcover_id'  
        write(unit_num,'(i5,1F10.6,1F17.6,11F10.6,3i4)') daily_out_idx(i), daily(daily_out_idx(i))%effprecip, &
-         surfaceWater(fields(daily_out_idx(i))%subws_ID)%avail_sw_vol,&
+         irr_sw(fields(daily_out_idx(i))%subws_ID)%avail_sw_vol,&
          daily(daily_out_idx(i))%tot_irr - daily(daily_out_idx(i))%gw_irr,&
          daily(daily_out_idx(i))%gw_irr, daily(daily_out_idx(i))%tot_irr, &
          daily(daily_out_idx(i))%recharge, daily(daily_out_idx(i))%runoff, &
@@ -889,7 +889,6 @@ SUBROUTINE write_UCODE_SFR_template(im, month, nSegs, model_name, total_days, da
     use ditch_module, only: is_ditch, write_ditch_diversion
     implicit none
     
-    ! Not implemented (not called anywhere) as of 8/3/2023
     ! Honestly - it's no different than the UCODE version. It would be best to add a "template file character" to an input file
     ! so we could vary the "parameter delimiter" (hardcoded to @). Then just use the same subroutine - LS
  

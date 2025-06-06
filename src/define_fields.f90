@@ -35,7 +35,7 @@ TYPE crop_table
 END TYPE
 
 TYPE surface_water
-    REAL*8 :: inflow_irr(31), inflow_nonirr(31), sw_irr, avail_sw_vol
+    REAL*8 :: inflow(31), irr_demand, avail_sw_vol
 END TYPE
 
 TYPE subws_flow_partitioning
@@ -54,7 +54,7 @@ TYPE(polygon), ALLOCATABLE, DIMENSION(:) :: fields
 TYPE(accumulator), ALLOCATABLE, DIMENSION(:):: previous, monthly, daily, yearly
 TYPE(well), ALLOCATABLE, DIMENSION(:) :: ag_wells, spec_wells, mfr_wells
 TYPE(crop_table), ALLOCATABLE, DIMENSION(:) :: crops
-TYPE(surface_water), ALLOCATABLE, DIMENSION(:) :: surfaceWater
+TYPE(surface_water), ALLOCATABLE, DIMENSION(:) :: irr_sw, non_irr_sw
 TYPE(subws_flow_partitioning), ALLOCATABLE, DIMENSION(:) :: SFR_allocation
 TYPE(Stream_Segments), ALLOCATABLE, DIMENSION(:) :: SFR_Routing
 INTEGER,SAVE :: npoly, nrotations, nAgWells, nSpecWells, nMFRWells, ip, nlandcover, nMFRcatchments
