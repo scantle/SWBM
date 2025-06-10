@@ -97,12 +97,12 @@ MODULE irrigation
 ! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   subroutine read_monthly_stream_inflow(inflow_is_vol, numdays, daily_sw)
     use m_global, only: nSFR_inflow_segs
+    implicit none
     INTEGER, INTENT(IN) :: numdays
     LOGICAL, INTENT(IN) :: inflow_is_vol, daily_sw
     INTEGER :: i, j, looplen=1
     CHARACTER(10) :: date_dummy
-    REAL*8 :: inflow_irr_tmp(nSFR_inflow_segs)
-    REAL*8 :: inflow_nonirr_tmp(nSFR_inflow_segs)
+    REAL*8 :: inflow_irr_tmp(nSFR_inflow_segs), inflow_nonirr_tmp(nSFR_inflow_segs)
     
     ! set looplen to days in month if doing daily flows
     if (daily_sw) looplen = numdays
@@ -114,6 +114,7 @@ MODULE irrigation
     do i = 1, looplen
       irr_sw(:)%inflow(i)       = 0.0d0
       non_irr_sw(:)%inflow(i)   = 0.0d0
+      SFR_allocation(:)%frac_subws_flow(i) = 0.0d0
       ! Read into temporary arrays (prevents i/o warning from reading into non-contiguous locations in memory)
       read(215,*) date_dummy, inflow_irr_tmp(1:)
       read(216,*) date_dummy, inflow_nonirr_tmp(1:)
@@ -126,7 +127,11 @@ MODULE irrigation
       
       ! Calc fractions to reassemble irrigation inflows later
       do j = 1, nSFR_inflow_segs
-        SFR_allocation(j)%frac_subws_flow(i) = inflow_irr_tmp(j) / irr_sw(SFR_allocation(j)%subws_ID)%inflow(i)
+        if (irr_sw(SFR_allocation(j)%subws_ID)%inflow(i)<= 0.0d0) then  ! avoid divide by zero
+          SFR_allocation(j)%frac_subws_flow(i) = 0.0d0
+        else
+          SFR_allocation(j)%frac_subws_flow(i) = inflow_irr_tmp(j) / irr_sw(SFR_allocation(j)%subws_ID)%inflow(i)
+        end if
       end do
       
     end do
@@ -163,8 +168,10 @@ MODULE irrigation
     if (daily_sw) looplen = numdays
     
     SFR_Routing%FLOW = 0.0                                         ! Reset all SFR flow to zero
+    do i=1, nSFR_total_segs
+      SFR_Routing(i)%FLOW_DAILY(1:) = 0.0d0
+    end do
     do i=1, nSFR_inflow_segs
-      SFR_Routing(i)%FLOW_DAILY(:) = 0.0
       wsid = SFR_allocation(i)%subws_ID
       seg = SFR_allocation(i)%SFR_segment
       avg_frac = sum(SFR_allocation(i)%frac_subws_flow(1:looplen))/looplen
@@ -192,7 +199,7 @@ MODULE irrigation
         !end if
       else if (daily_sw .and. irr_sw(wsid)%avail_sw_vol == 0.0) then 
         ! The available flow will just be the daily nonirrigation inflow
-        SFR_Routing(seg)%FLOW_DAILY(1:looplen) = non_irr_sw(wsid)%inflow(1:looplen)
+        SFR_Routing(seg)%FLOW_DAILY(1:looplen) = non_irr_sw(i)%inflow(1:looplen)
       end if
       ! Debug
       !if (i==1) write(*,'(3a5,4a14)') 'i','wsid','seg','SWRemainder','AvgDailyPump','Flow','AvgDailyFlow'
