@@ -763,7 +763,7 @@ MODULE SWBM_output
       if (iditch > 0) then
         call write_ditch_diversion(213, iditch, month)
       else
-        ! Item 4b, code assumes icalc = 1
+        ! Item 4b/6a, code assumes icalc = 1
         if(SFR_Routing(i)%FLOW<0) SFR_Routing(i)%FLOW = 0.0   ! Remove negative flow rates caused by rounding errors
         !write(*,'(A20,I3,A3,es10.2)') "SFR_Routing%FLOW", i," : ", SFR_Routing(i)%FLOW
 
