@@ -21,8 +21,8 @@ module water_mover
 !-------------------------------------------------------------------------------------------------!
   subroutine read_water_mover_input_file(filename)
     use m_file_io
+    use irrigation, only: nSFR_total_segs
     use m_vstringlist, only: t_vstringlist
-    use irrigation, only: nsegs
     use define_fields, only: npoly, nAgWells, ag_wells
     implicit none
     character(*), intent(in)     :: filename
@@ -80,7 +80,7 @@ module water_mover
                 call error_handler(1,reader%file,"Invalid from well id, check nAgWells. well id = "//temp)
               end if
             case(2) ! SFR
-              if (from_to(1,i) > 0 .and. from_to(1,i) <= nsegs) then
+              if (from_to(1,i) > 0 .and. from_to(1,i) <= nSFR_total_segs) then
                 sfr_rate(i) = -1 * rate
               else
                 call item2char(strings, 2, temp)
@@ -107,7 +107,7 @@ module water_mover
                 call error_handler(1,reader%file,"Invalid from well id, check nAgWells. well id = "//temp)
               end if
             case(2) ! SFR
-              if (from_to(2,i) > 0 .or. from_to(2,i) <= nsegs) then
+              if (from_to(2,i) > 0 .or. from_to(2,i) <= nSFR_total_segs) then
                 sfr_rate(i) = rate
               else
                 call item2char(strings, 4, temp)
