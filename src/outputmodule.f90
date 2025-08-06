@@ -559,25 +559,27 @@ MODULE SWBM_output
    END SUBROUTINE print_annual
 
 !  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-     SUBROUTINE write_MODFLOW_ETS(im,numdays,nrows,ncols,rch_zones,Total_Ref_ET,ET_Zone_Cells, ET_Cells_ex_depth, npoly)
+     SUBROUTINE write_MODFLOW_ETS(im,numdays,nrows,ncols,nMFOverlaps, mf_overlap,Total_Ref_ET,ET_Zone_Cells, ET_Cells_ex_depth, npoly)
 
-     INTEGER, INTENT(IN) :: im,nrows,ncols, npoly !,month
-     INTEGER, INTENT(IN) :: rch_zones(nrows,ncols), ET_Zone_Cells(nrows,ncols) !,nday(0:11)
+     INTEGER, INTENT(IN) :: im,nrows,ncols, npoly, nMFOverlaps
+     INTEGER, INTENT(IN) :: ET_Zone_Cells(nrows,ncols) !,nday(0:11), rch_zones(nrows,ncols)
+     TYPE(overlap), INTENT(IN) :: mf_overlap
      REAL, INTENT(IN) :: Total_Ref_ET
      REAL, DIMENSION(npoly) :: ET_fraction
-     INTEGER :: ip, numdays
+     INTEGER :: ip, numdays, row, col, k
+     REAL    :: et_rate
      REAL, DIMENSION(nrows,ncols) :: ET_Cells_ex_depth(nrows,ncols), ET_matrix_out !Extinction_depth_matrix,
 
      ! surgery - passing deficiency
      ET_matrix_out = 0.
      !Avg_Ref_ET = Total_Ref_ET/real(numdays)                                                   ! Calculate average Reference ET for populating ET package
 
-     do ip=1,npoly
-       !ET_fraction(ip) = monthly(ip)%ET_active / real(numdays)
-       where (rch_zones(:,:) == ip)
-         ET_matrix_out(:,:) = monthly(ip)%deficiency/real(numdays) !* (1 - ET_fraction(ip))  ! Scale Average monthly ET by the number of days ET was not active on the field.
-       end where
-     enddo
+     do k = 1, nMFOverlaps
+       row    = mf_overlap%irow(k)
+       col    = mf_overlap%icol(k)
+       et_rate = monthly(mf_overlap%pid(k))%deficiency / REAL(numdays)
+       ET_matrix_out(row, col) = ET_matrix_out(row, col) + et_rate * mf_overlap%w(k)
+     end do
 
      ET_matrix_out = ET_matrix_out * ET_Zone_Cells ! Only keeps ET values where ET from GW is active (cell value of 1)
      !write(*,*) ET_Cells_ex_depth
@@ -602,58 +604,43 @@ MODULE SWBM_output
 
 ! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-     SUBROUTINE write_MODFLOW_RCH(im,numdays,nrows,ncols,rch_zones)  ! Recharge file
-
-
-       INTEGER, INTENT(IN) :: im,nrows,ncols, numdays
-       INTEGER, INTENT(IN) :: rch_zones(nrows,ncols)
+     SUBROUTINE write_MODFLOW_RCH(im,numdays,nrows,ncols,nMFOverlaps, mf_overlap)  ! Recharge file
+       implicit none
+       INTEGER, INTENT(IN) :: im,nrows,ncols, numdays, nMFOverlaps
+       !INTEGER, INTENT(IN) :: rch_zones(nrows,ncols)
        REAL, ALLOCATABLE, DIMENSION(:,:) ::  recharge_matrix
-       INTEGER :: ip
+       TYPE(overlap), INTENT(IN)         :: mf_overlap
+       INTEGER :: ip, k, row, col
        INTEGER, SAVE :: SP = 1
-       REAL :: ttl_rch
+       REAL :: ttl_rch, recharge_rate
        CHARACTER(40) :: rch_mat_format ! filename,
 
        ALLOCATE(recharge_matrix(nrows,ncols))
        recharge_matrix = 0.
 
        if (im == 1) then
-        write(84,'(a31)')'# Recharge File written by SWBM'
-        write(84,*)'PARAMETER  0'
-        write(84,*)'3  50'
-        end if
+         write(84,'(a31)')'# Recharge File written by SWBM'
+         write(84,*)'PARAMETER  0'
+         write(84,*)'3  50'
+       end if
 
         write(84,'(a10)')'1  0'
         write(84,'(a63)')'        18   1.00000(10e14.6)                   -1     RECHARGE'
 
+        write(rch_mat_format, '(A1,I3,A7)')'(', ncols, 'G14.4)'
+        
+        ! loop over the sparse overlaps
+        do k = 1, nMFOverlaps
+          row            = mf_overlap%irow(k)
+          col            = mf_overlap%icol(k)
+          recharge_rate  = monthly(mf_overlap%pid(k))%recharge / REAL(numdays)
+          recharge_matrix(row, col) = recharge_matrix(row, col) + recharge_rate * mf_overlap%w(k)
+        end do
 
-       write(rch_mat_format, '(A1,I3,A7)')'(', ncols, 'G14.4)'
-       !write(*,'(a24)') rch_mat_format
-
-       ! write(84,*)'1'
-       ! write(84,*)' OPEN/CLOSE .\recharge\rch_SP'
-       !write(*,'(a24)') filename
-
-         do ip = 1, npoly
-           where (rch_zones(:,:) == ip)
-             recharge_matrix(:,:) = monthly(ip)%recharge / numdays
-           end where
-         enddo
-         !if (SP < 10) then
-         !  write(filename, '(A22,I1,A4)') '.\recharge\recharge_SP_',SP,'.txt'
-         !elseif (SP < 100) then
-         !	write(filename, '(A22,I2,A4)') '.\recharge\recharge_SP_',SP,'.txt'
-         !else
-        !	write(filename, '(A22,I3,A4)') '.\recharge\recharge_SP_',SP,'.txt'
-         !endif
-         !write(*,'(a24)') filename
-
-         !open(unit=84, file=trim(filename), status = 'replace')
-
-         !write(84,rch_mat_format) recharge_matrix
-         write(84,'(10e14.6)') recharge_matrix
-         ttl_rch = sum(recharge_matrix*sum(fields%area))
-         write(900,*) ttl_rch, ttl_rch*numdays
-         SP = SP + 1
+        write(84,'(10e14.6)') recharge_matrix
+        ttl_rch = sum(recharge_matrix*sum(fields%area))
+        write(900,*) ttl_rch, ttl_rch*numdays
+        SP = SP + 1
 
      END SUBROUTINE write_MODFLOW_RCH
 

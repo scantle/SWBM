@@ -50,6 +50,13 @@ TYPE Stream_Segments
     CHARACTER(12) :: Bed_K_Param, Manning_n_Param
 END TYPE
 
+type overlap
+    INTEGER, ALLOCATABLE :: pid(:)   ! polygon_id
+    INTEGER, ALLOCATABLE :: irow(:)  ! row index
+    INTEGER, ALLOCATABLE :: icol(:)  ! column index
+    REAL,    ALLOCATABLE :: w(:)     ! overlap weight
+end type overlap
+
 TYPE(polygon), ALLOCATABLE, DIMENSION(:) :: fields
 TYPE(accumulator), ALLOCATABLE, DIMENSION(:):: previous, monthly, daily, yearly
 TYPE(well), ALLOCATABLE, DIMENSION(:) :: ag_wells, spec_wells, mfr_wells
@@ -57,7 +64,8 @@ TYPE(crop_table), ALLOCATABLE, DIMENSION(:) :: crops
 TYPE(surface_water), ALLOCATABLE, DIMENSION(:) :: irr_sw, non_irr_sw
 TYPE(subws_flow_partitioning), ALLOCATABLE, DIMENSION(:) :: SFR_allocation
 TYPE(Stream_Segments), ALLOCATABLE, DIMENSION(:) :: SFR_Routing
-INTEGER,SAVE :: npoly, nrotations, nAgWells, nSpecWells, nMFRWells, ip, nlandcover, nMFRcatchments
+type(overlap)  :: mf_overlap
+INTEGER,SAVE :: npoly, nrotations, nAgWells, nSpecWells, nMFRWells, ip, nlandcover, nMFRcatchments, nMFOverlaps
 INTEGER, ALLOCATABLE :: mfr_catch_mult(:), mfr_catch_nwells(:)
 REAL :: ann_spec_well_vol
 
@@ -65,10 +73,9 @@ contains
 
 ! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-SUBROUTINE readpoly(npoly, nrows, ncols, rch_zones)
+SUBROUTINE readpoly(npoly, nrows, ncols)
 
   INTEGER, INTENT(IN):: npoly, nrows, ncols
-  INTEGER, DIMENSION(nrows, ncols), INTENT(IN)  :: rch_zones
   INTEGER :: i, dummy
   INTEGER, DIMENSION(nrows, ncols)  :: dummy_mat
 
@@ -106,10 +113,6 @@ SUBROUTINE readpoly(npoly, nrows, ncols, rch_zones)
         end if
       read(11,*)dummy, fields(i)%precip_fact
       dummy_mat = 0
-      where (rch_zones(:,:) == i)
-        dummy_mat(:,:) = 1
-      end where
-      fields(i)%nModelCells = SUM(dummy_mat)
       write(800,'(i6,i3,i4,i5,f20.7,i5,f20.5,f20.5,i6,l3)')i ,fields(i)%subws_ID, fields(i)%SWBM_LU, &
       fields(i)%irr_type, fields(i)%area, fields(i)%water_source, fields(i)%whc, fields(i)%init_fill_frac, &
       fields(i)%WL2CP_year , fields(i)%ILR
@@ -140,6 +143,52 @@ SUBROUTINE read_landcover_table(nlandcover)
   crops(:)%RootDepth = crops(:)%RootDepth * crops(:)%rd_mult
 
 END SUBROUTINE read_landcover_table
+
+! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+subroutine read_overlap_matrix(filename)
+  use m_file_io
+  use m_global, only: nrows, ncols
+  use m_error_handler, only: error_handler
+  implicit none
+  character(*), intent(in)     :: filename
+  character(30)                :: temp
+  type(t_file_reader), pointer :: reader
+  integer                      :: i
+  
+  ! Allocate
+  allocate(mf_overlap%pid (nMFOverlaps), &
+           mf_overlap%irow(nMFOverlaps), &
+           mf_overlap%icol(nMFOverlaps), &
+           mf_overlap%w   (nMFOverlaps)  )
+           
+  ! Read
+  reader => open_file_reader(filename)
+  call reader%skip(1)  ! Skip header
+  do i=1, nMFOverlaps
+    read(reader%unit) mf_overlap%pid(i), mf_overlap%irow(i), mf_overlap%icol(i), mf_overlap%w(i)
+    ! A little error checking
+    if (mf_overlap%pid(i) > npoly) then
+      write(temp, '(I0)') mf_overlap%pid(i)
+      call error_handler(1,reader%file,"Invalid Polygon ID: "//trim(temp))
+    end if
+    if (mf_overlap%irow(i) < 1 .or. mf_overlap%irow(i) > nrows) then
+      write(temp,'(I0)') mf_overlap%irow(i)
+      call error_handler(1, reader%file, 'Row out of range: '//trim(temp))
+    end if
+    if (mf_overlap%icol(i) < 1 .or. mf_overlap%icol(i) > ncols) then
+      write(temp,'(I0)') mf_overlap%icol(i)
+      call error_handler(1, reader%file, 'Col out of range: '//trim(temp))
+    end if
+    if (mf_overlap%w(i) > 1 .or. mf_overlap%w(i) < 0) then
+      write(temp, '(I0)') i
+      call error_handler(1,reader%file,"Invalid Weight on line: "//trim(temp))
+    end if
+  end do
+  
+  call reader%close_file()
+
+end subroutine read_overlap_matrix
 
 ! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
