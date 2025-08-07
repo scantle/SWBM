@@ -166,7 +166,7 @@ subroutine read_overlap_matrix(filename)
   reader => open_file_reader(filename)
   call reader%skip(1)  ! Skip header
   do i=1, nMFOverlaps
-    read(reader%unit) mf_overlap%pid(i), mf_overlap%irow(i), mf_overlap%icol(i), mf_overlap%w(i)
+    read(reader%unit,*) mf_overlap%pid(i), mf_overlap%irow(i), mf_overlap%icol(i), mf_overlap%w(i)
     ! A little error checking
     if (mf_overlap%pid(i) > npoly) then
       write(temp, '(I0)') mf_overlap%pid(i)
