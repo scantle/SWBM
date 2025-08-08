@@ -328,7 +328,7 @@ module m_read_main_input
   subroutine read_int_array_file(filename, array, rows, cols, has_header)
     character(*), intent(in)     :: filename
     integer, intent(in)          :: rows, cols
-    integer, intent(inout)       :: array(rows, cols)   ! Typical order
+    integer, intent(inout)       :: array(cols, rows)   ! Fortran Col-major ordering
     logical, intent(in),optional :: has_header
 
     reader => open_file_reader(filename)
@@ -349,7 +349,7 @@ module m_read_main_input
   subroutine read_real_array_file(filename, array, rows, cols, has_header)
     character(*), intent(in)     :: filename
     integer, intent(in)          :: rows, cols
-    real, intent(inout)          :: array(rows, cols)   ! Typical order
+    real, intent(inout)          :: array(cols, rows)   ! Fortran Col-major ordering
     logical, intent(in),optional :: has_header
 
     reader => open_file_reader(filename)

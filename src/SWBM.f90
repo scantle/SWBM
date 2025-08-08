@@ -89,8 +89,8 @@ PROGRAM SWBM
 
   ! Read in zone/property related files before time loop
   !ALLOCATE(rch_zones(nrows,ncols))
-  ALLOCATE(ET_Zone_Cells(nrows,ncols))
-  ALLOCATE(ET_Cells_ex_depth(nrows,ncols))
+  ALLOCATE(ET_Zone_Cells(ncols,nrows))
+  ALLOCATE(ET_Cells_ex_depth(ncols,nrows))
   filename = trim(model_name) // '.wel'
   open (unit=536, file= filename, status="old")     
   read(536,*) ! Read heading line into nothing

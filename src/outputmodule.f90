@@ -562,13 +562,13 @@ MODULE SWBM_output
      SUBROUTINE write_MODFLOW_ETS(im,numdays,nrows,ncols,nMFOverlaps, mf_overlap,Total_Ref_ET,ET_Zone_Cells, ET_Cells_ex_depth, npoly)
 
      INTEGER, INTENT(IN) :: im,nrows,ncols, npoly, nMFOverlaps
-     INTEGER, INTENT(IN) :: ET_Zone_Cells(nrows,ncols) !,nday(0:11), rch_zones(nrows,ncols)
+     INTEGER, INTENT(IN) :: ET_Zone_Cells(ncols,nrows)
      TYPE(overlap), INTENT(IN) :: mf_overlap
      REAL, INTENT(IN) :: Total_Ref_ET
-     REAL, DIMENSION(npoly) :: ET_fraction
+     REAL, INTENT(IN) :: ET_Cells_ex_depth(ncols, nrows)
      INTEGER :: ip, numdays, row, col, k
      REAL    :: et_rate
-     REAL, DIMENSION(nrows,ncols) :: ET_Cells_ex_depth(nrows,ncols), ET_matrix_out !Extinction_depth_matrix,
+     REAL    :: ET_matrix_out(ncols, nrows) !Extinction_depth_matrix,
 
      ! surgery - passing deficiency
      ET_matrix_out = 0.
@@ -578,7 +578,7 @@ MODULE SWBM_output
        row    = mf_overlap%irow(k)
        col    = mf_overlap%icol(k)
        et_rate = monthly(mf_overlap%pid(k))%deficiency / REAL(numdays)
-       ET_matrix_out(row, col) = ET_matrix_out(row, col) + et_rate * mf_overlap%w(k)
+       ET_matrix_out(col, row) = ET_matrix_out(col, row) + et_rate * mf_overlap%w(k)
      end do
 
      ET_matrix_out = ET_matrix_out * ET_Zone_Cells ! Only keeps ET values where ET from GW is active (cell value of 1)
@@ -615,7 +615,7 @@ MODULE SWBM_output
        REAL :: ttl_rch, recharge_rate
        CHARACTER(40) :: rch_mat_format ! filename,
 
-       ALLOCATE(recharge_matrix(nrows,ncols))
+       ALLOCATE(recharge_matrix(ncols, nrows))
        recharge_matrix = 0.
 
        if (im == 1) then
@@ -634,7 +634,7 @@ MODULE SWBM_output
           row            = mf_overlap%irow(k)
           col            = mf_overlap%icol(k)
           recharge_rate  = monthly(mf_overlap%pid(k))%recharge / REAL(numdays)
-          recharge_matrix(row, col) = recharge_matrix(row, col) + recharge_rate * mf_overlap%w(k)
+          recharge_matrix(col, row) = recharge_matrix(col, row) + recharge_rate * mf_overlap%w(k)
         end do
 
         write(84,'(10e14.6)') recharge_matrix
