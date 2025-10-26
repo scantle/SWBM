@@ -590,8 +590,8 @@ MODULE SWBM_output
        write(83,'(10e14.6)') ET_matrix_out                ! Write Max ET Rates
        write(83,*)'       20   1.00000(10e14.6)                   -1     ET DEPTH'
        write(83,'(10e14.6)') ET_Cells_ex_depth  ! Write ET Extinction Depth
-       write(83,*)'        05.0000e-01(20F6.3)                    -1     PXDP Segment 1'    ! Linear decrease in ET from land surface to 0.5 m below surface
-       write(83,*)'        05.0000e-01(20F6.3)                    -1     PETM Segment 1'    ! Linear decrease in ET from land surface to 0.5 m below surface
+       write(83,*)'        04.9900e-01(20F6.3)                    -1     PXDP Segment 1'    ! Linear decrease in ET from land surface to 0.5 m below surface
+       write(83,*)'        04.9900e-01(20F6.3)                    -1     PETM Segment 1'    ! Linear decrease in ET from land surface to 0.5 m below surface
      else
        write(83,*)'       -1         1         1        -1        -1'	   !  INETSS  INETSR  INETSX  INIETS  INSGDF
        write(83, *)"       20   1.00000(10e14.6)                   -1     ET RATE"
