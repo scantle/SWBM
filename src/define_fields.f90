@@ -66,7 +66,8 @@ TYPE(subws_flow_partitioning), ALLOCATABLE, DIMENSION(:) :: SFR_allocation
 TYPE(Stream_Segments), ALLOCATABLE, DIMENSION(:) :: SFR_Routing
 type(overlap)  :: mf_overlap
 INTEGER,SAVE :: npoly, nrotations, nAgWells, nSpecWells, nMFRWells, ip, nlandcover, nMFRcatchments, nMFOverlaps
-INTEGER, ALLOCATABLE :: mfr_catch_mult(:), mfr_catch_nwells(:)
+INTEGER, ALLOCATABLE :: mfr_catch_nwells(:)
+REAL,ALLOCATABLE     :: mfr_catch_mult(:)
 REAL :: ann_spec_well_vol
 
 contains
@@ -339,6 +340,7 @@ SUBROUTINE initialize_wells(npoly, nAgWells, nSpecWells, nMFRWells)
       do i=1, nMFRcatchments
         read(10,*) catch, mult
         write(dummy, '(a)') catch
+        catch_id = findloc(volfile_catchments, catch, dim=1)
         if (catch_id==0) then
           write(dummy, '(a)') catch
           call error_handler(1,filename=trim(mfr_catchment_mult_file),opt_msg='Invalid catchment: '//trim(dummy))
