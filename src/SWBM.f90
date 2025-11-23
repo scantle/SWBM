@@ -33,7 +33,7 @@ PROGRAM SWBM
   INTEGER :: numdays, WY, month, jday, i, im, ncmds, dummy, simday, total_days, loopdays
   INTEGER :: n_wel_param, unit_num  !, num_MAR_fields
   INTEGER :: abs_irr_month, abs_irr_day
-  INTEGER, ALLOCATABLE, DIMENSION(:,:) :: rch_zones, ET_Zone_Cells
+  INTEGER, ALLOCATABLE, DIMENSION(:,:) :: ET_Zone_Cells  ! rch_zones
   INTEGER, ALLOCATABLE, DIMENSION(:)   :: ndays, SFR_inflow_segs!, MAR_fields
   REAL, ALLOCATABLE, DIMENSION(:,:) :: ET_Cells_ex_depth
   REAL :: stn_precip, Total_Ref_ET, MAR_vol
@@ -88,9 +88,9 @@ PROGRAM SWBM
   if (trim(sfr_jtf_file) /= "") call copy_file(sfr_jtf_file, trim(model_name)//'_SFR.jtf')  ! TODO should error if WRITE_UCODE is TRUE
 
   ! Read in zone/property related files before time loop
-  ALLOCATE(rch_zones(nrows,ncols))
-  ALLOCATE(ET_Zone_Cells(nrows,ncols))
-  ALLOCATE(ET_Cells_ex_depth(nrows,ncols))
+  !ALLOCATE(rch_zones(nrows,ncols))
+  ALLOCATE(ET_Zone_Cells(ncols,nrows))
+  ALLOCATE(ET_Cells_ex_depth(ncols,nrows))
   filename = trim(model_name) // '.wel'
   open (unit=536, file= filename, status="old")     
   read(536,*) ! Read heading line into nothing
@@ -112,8 +112,11 @@ PROGRAM SWBM
   close(10)
   
   ! Read in MODFLOW recharge zone matrix
-  rch_zones = 0
-  call read_array_file(recharge_zones_file, rch_zones, nrows, ncols)
+  !rch_zones = 0
+  !call read_array_file(recharge_zones_file, rch_zones, nrows, ncols)
+  
+  ! Read in MODFLOW overlap
+  call read_overlap_matrix(mf_overlap_file)
   
   ! Read in extinction depths for MODFLOW ET-from-groundwater zones
   ET_Cells_ex_depth = 0
@@ -126,7 +129,7 @@ PROGRAM SWBM
   CALL initialize_streams()
   CALL read_landcover_table(nlandcover)
 
-  CALL readpoly(npoly, nrows, ncols, rch_zones)                  ! Read in field info
+  CALL readpoly(npoly, nrows, ncols)                  ! Read in field info
   CALL initialize_wells(npoly, nAgWells, nSpecWells, nMFRWells)  ! Read in Ag well info
   
   !LS Read in irrigation ditch & water mover
@@ -250,8 +253,8 @@ PROGRAM SWBM
     CALL monthly_out_by_field(im)
     CALL print_monthly_output(im, nlandcover, nSubws)
     if (opt%write_modflow) then
-      CALL write_MODFLOW_RCH(im,numdays,nrows,ncols,rch_zones)
-      CALL write_MODFLOW_ETS(im,numdays,nrows,ncols,rch_zones,Total_Ref_ET,ET_Zone_Cells, ET_Cells_ex_depth, npoly)
+      CALL write_MODFLOW_RCH(im,numdays,nrows,ncols,nMFOverlaps, mf_overlap)
+      CALL write_MODFLOW_ETS(im,numdays,nrows,ncols,nMFOverlaps, mf_overlap,Total_Ref_ET,ET_Zone_Cells, ET_Cells_ex_depth, npoly)
       CALL write_MODFLOW_SFR(im, month, nSFR_total_segs, model_name, total_days, opt%DAILY_SW)
       CALL write_MODFLOW_SFR_tabfiles(im, numdays, simday, nSFR_total_segs, opt%DAILY_SW)
       CALL write_MODFLOW_WEL(im, month, nAgWells, n_wel_param, model_name)       

@@ -14,7 +14,8 @@ module m_global
   character(100)   :: precip_file
   character(100)   :: et_file
   character(100)   :: et_ext_depth_file
-  character(100)   :: recharge_zones_file
+  !character(100)   :: recharge_zones_file
+  character(100)   :: mf_overlap_file
   character(100)   :: kc_frac_file
   character(100)   :: poly_landcover_file
   character(100)   :: poly_agwell_file

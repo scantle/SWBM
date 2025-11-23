@@ -98,11 +98,11 @@ module m_read_main_input
 
   subroutine read_DISCRETIZATION_block(reader)
     use m_global, only: nmonths, WYstart, nrows, ncols, model_name, nSFR_inflow_segs
-    use define_fields, only: npoly, nAgWells, nSpecWells, nMFRWells, nlandcover
+    use define_fields, only: npoly, nAgWells, nSpecWells, nMFRWells, nlandcover, nMFOverlaps
     use irrigation, only: nsubws
     implicit none
     type(t_file_reader), pointer    :: reader
-    logical                         :: has_necessary_items(12) = .false.
+    logical                         :: has_necessary_items(13) = .false.
 
     ! Standard file reader variables
     integer                    :: status, length
@@ -138,18 +138,21 @@ module m_read_main_input
         case("NMFRWELLS")
           nMFRWells = item2int(strings, 2)
           has_necessary_items(8) = .true.          
+        case("NMFOVERLAPS")
+          nMFOverlaps = item2int(strings, 2)
+          has_necessary_items(9) = .true.
         case("NSFR_INFLOW_SEGS")
           nSFR_inflow_segs = item2int(strings, 2)
-          has_necessary_items(9) = .true.
+          has_necessary_items(10) = .true.
         case("NAME","MFNAME")
           call item2char(strings, 2, model_name)
-          has_necessary_items(10) = .true.
+          has_necessary_items(11) = .true.
         case("NROWS")
           nrows = item2int(strings, 2)
-          has_necessary_items(11) = .true.
+          has_necessary_items(12) = .true.
         case("NCOLS")
           ncols = item2int(strings, 2)
-          has_necessary_items(12) = .true.
+          has_necessary_items(13) = .true.
         case DEFAULT
           call error_handler(1,reader%file,"Unknown Discretization option: " // trim(id))
       end select
@@ -218,8 +221,11 @@ module m_read_main_input
         case("ET_EXT_DEPTH")
           call item2char(strings, 2, et_ext_depth_file)
           has_necessary_items(3) = .true.
-        case("RECHARGE_ZONES")
-          call item2char(strings, 2, recharge_zones_file)
+!        case("RECHARGE_ZONES")
+!          call item2char(strings, 2, recharge_zones_file)
+!          has_necessary_items(4) = .true.
+        case("MF_OVERLAP")
+          call item2char(strings, 2, mf_overlap_file)
           has_necessary_items(4) = .true.
         case("KC_FRAC")
           call item2char(strings, 2, kc_frac_file)
@@ -322,7 +328,7 @@ module m_read_main_input
   subroutine read_int_array_file(filename, array, rows, cols, has_header)
     character(*), intent(in)     :: filename
     integer, intent(in)          :: rows, cols
-    integer, intent(inout)       :: array(rows, cols)   ! Typical order
+    integer, intent(inout)       :: array(cols, rows)   ! Fortran Col-major ordering
     logical, intent(in),optional :: has_header
 
     reader => open_file_reader(filename)
@@ -343,7 +349,7 @@ module m_read_main_input
   subroutine read_real_array_file(filename, array, rows, cols, has_header)
     character(*), intent(in)     :: filename
     integer, intent(in)          :: rows, cols
-    real, intent(inout)          :: array(rows, cols)   ! Typical order
+    real, intent(inout)          :: array(cols, rows)   ! Fortran Col-major ordering
     logical, intent(in),optional :: has_header
 
     reader => open_file_reader(filename)
