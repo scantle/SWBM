@@ -12,6 +12,7 @@ This is a modified version of ["official" SWBM](https://github.com/gustolley/SWB
 - Monthly corrections (multipliers) to field pET via the `ET_CORRECTION` file
 - Managed Aquifer Recharge (MAR) can be input using the `MAR_DEPTH` file
 - Wells are either agricultural wells (rates are predicted by model) or specified wells (rates are specfied in a file and passed to the GW model)
+- Overlap with MODFLOW model is given through a fractional overlap file, where a field can supply a percent of it's recharge/excess ET to any/multiple MODFLOW cells
 
 This version may contain features/changes specific to the [Scott Valley Integrated Hydrologic Model (SVIHM)](https://github.com/scantle/SVIHM).
 
